@@ -36,7 +36,7 @@ export function usePaneLayout(shell: RefObject<HTMLDivElement | null>) {
   const bounds = (pane: Pane) => {
     const width = viewportWidth.current;
     return pane === "sidebar"
-      ? [260, Math.min(520, Math.max(260, width - 400))]
+      ? [260, Math.max(260, width - 400)]
       : [260, Math.max(260, width - effective.current.sidebar - 286)];
   };
   const apply = (pane: Pane, value: number) => {

@@ -57,19 +57,42 @@ it("键盘调整两处分界，窗口缩窄再放大恢复原偏好", () => {
   const sidebar = screen.getByLabelText("侧栏"),
     detail = screen.getByLabelText("详情"),
     shell = screen.getByTestId("shell");
-  fireEvent.keyDown(sidebar, { key: "End" });
   fireEvent.keyDown(detail, { key: "ArrowLeft" });
-  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("520px");
   expect(shell.style.getPropertyValue("--detail-width")).toBe("440px");
+  fireEvent.keyDown(sidebar, { key: "End" });
+  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("880px");
+  expect(shell.style.getPropertyValue("--detail-width")).toBe("260px");
   width = 720;
   act(() => resize());
   expect(shell.style.getPropertyValue("--sidebar-width")).toBe("320px");
   expect(shell.dataset.compactDetails).toBe("true");
   width = 1280;
   act(() => resize());
-  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("520px");
+  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("880px");
+  expect(shell.style.getPropertyValue("--detail-width")).toBe("260px");
+  width = 1680;
+  act(() => resize());
+  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("880px");
   expect(shell.style.getPropertyValue("--detail-width")).toBe("440px");
-  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("520");
+  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("880");
+  expect(localStorage.getItem("oil-git.detail-width")).toBe("440");
+});
+it("侧栏可拖过 520px，最大宽度随窗口变化并保留差异阅读空间", () => {
+  render(<Harness />);
+  const handle = screen.getByLabelText("侧栏"),
+    shell = screen.getByTestId("shell");
+  fireEvent.pointerDown(handle, { button: 0, clientX: 360 });
+  fireEvent.pointerMove(handle, { clientX: 800 });
+  fireEvent.pointerUp(handle);
+  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("800px");
+  expect(handle.getAttribute("aria-valuenow")).toBe("800");
+  expect(handle.getAttribute("aria-valuemax")).toBe("880");
+  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("800");
+  fireEvent.pointerDown(handle, { button: 0, clientX: 800 });
+  fireEvent.pointerMove(handle, { clientX: 2000 });
+  fireEvent.pointerUp(handle);
+  expect(shell.style.getPropertyValue("--sidebar-width")).toBe("880px");
+  expect(width - Number(handle.getAttribute("aria-valuenow"))).toBe(400);
 });
 it("连续拖拽可结束，取消与失焦不保存临时宽度", () => {
   render(<Harness />);
