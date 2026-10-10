@@ -32,7 +32,7 @@
 
 Repository names, branches, commit messages, paths, and author details remain exactly as Git records them when the interface language changes.
 
-The workspace sidebar stays visible while the right pane switches between changes and history. Choose a branch or tag to filter history; this only changes what is shown and never checks out a branch. Choose a worktree to observe it in the same way.
+The left sidebar switches between the working tree and commit history. Choose a commit and one of its changed files on the left; both views share the full diff reader on the right. Branch and tag filters only change the displayed history. Switching worktrees keeps the original project and recent-project entry while observing the selected directory.
 
 The interface supports English and Simplified Chinese. It follows the system language on first launch, then remembers the language you choose. Dark, light, and green themes are available as well.
 

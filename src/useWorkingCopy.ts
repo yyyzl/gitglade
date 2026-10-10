@@ -20,6 +20,7 @@ function preferred(files: FileState[]): WorkingFile | null {
   return f ? { path: f.path, mode: fileModes(f)[0] } : null;
 }
 export function useWorkingCopy(project: Project | null, active: boolean) {
+  const choices = useRef(new Map<string, WorkingFile | null>());
   const [selection, setSelection] = useState<{
     repoId: string;
     file: WorkingFile | null;
@@ -35,7 +36,9 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
   const cache = useRef(new Map<string, Diff>());
   const files = project?.snapshot.files ?? [];
   const requested =
-    selection?.repoId === project?.repoId ? selection?.file : null;
+    selection?.repoId === project?.repoId
+      ? selection?.file
+      : choices.current.get(project?.repoId ?? "");
   const actual = files.find((f) => f.path === requested?.path);
   const file =
     actual && requested
@@ -54,12 +57,11 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
         !actual ||
         (requested && !fileModes(actual).includes(requested.mode)))
     ) {
-      setSelection({
-        repoId: project.repoId,
-        file: actual
-          ? { path: actual.path, mode: fileModes(actual)[0] }
-          : preferred(files),
-      });
+      const next = actual ? file : preferred(files);
+      choices.current.set(project.repoId, next);
+      while (choices.current.size > 12)
+        choices.current.delete(choices.current.keys().next().value!);
+      setSelection({ repoId: project.repoId, file: next });
     }
   }, [project?.repoId, project?.snapshot.changesRevision]);
   const key =
@@ -151,7 +153,10 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
     error: result.key === key ? result.error : null,
     loading: !cached && result.key === key && result.loading,
     choose: (value: WorkingFile) => {
-      if (project) setSelection({ repoId: project.repoId, file: value });
+      if (project) {
+        choices.current.set(project.repoId, value);
+        setSelection({ repoId: project.repoId, file: value });
+      }
     },
     retry: () => setRetry((n) => n + 1),
   };

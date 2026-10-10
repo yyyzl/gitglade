@@ -34,6 +34,9 @@ const empty: History = {
 export function useRepository() {
   const { t } = useI18n();
   const [project, setProject] = useState<Project | null>(null);
+  const [identity, setIdentity] = useState<Recent | null>(null);
+  const identityRef = useRef<Recent | null>(null);
+  const worktreeHistory = useRef(new Map<string, History>());
   const [recents, setRecents] = useState<Recent[]>([]);
   const [recentError, setRecentError] = useState<GitError | null>(null);
   const [forgettingRecent, setForgettingRecent] = useState(false);
@@ -48,6 +51,7 @@ export function useRepository() {
     path: string;
     view?: string;
     forgotten: Set<string>;
+    withinProject: boolean;
   } | null>(null);
   const [opening, setOpening] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -201,18 +205,79 @@ export function useRepository() {
     [loadHistory],
   );
   const openPath = useCallback(
-    async (path: string, view?: string, retryIntent?: Set<string>) => {
+    async (
+      path: string,
+      view?: string,
+      retryIntent?: Set<string>,
+      withinProject = false,
+    ) => {
       hasOpenIntent.current = true;
       setRecentError(null);
       const forgottenForThisOpen = retryIntent ?? new Set<string>();
       recentOpenIntent.current = forgottenForThisOpen;
       const ticket = openGate.current.next();
       setOpening(true);
-      failedOpen.current = { path, view, forgotten: forgottenForThisOpen };
+      failedOpen.current = {
+        path,
+        view,
+        forgotten: forgottenForThisOpen,
+        withinProject,
+      };
       setOpenError(null);
       try {
-        const next = await request<Project>("open_repository", { path });
+        const opened = await request<Project>("open_repository", { path });
         if (!openGate.current.accepts(ticket)) return;
+        const original = withinProject
+          ? identityRef.current!
+          : { path: opened.snapshot.path, name: opened.snapshot.name };
+        let next = opened;
+        if (!withinProject && !view) {
+          let saved: string | null = null;
+          try {
+            saved = localStorage.getItem("oil-git.worktree." + original.path);
+          } catch {
+            /* 设置不可用时仍能读取项目。 */
+          }
+          const tree = opened.snapshot.worktrees.find(
+            (tree) => tree.path === saved && tree.available && !tree.bare,
+          );
+          if (tree && tree.path !== opened.snapshot.path) {
+            try {
+              next = await request<Project>("open_repository", {
+                path: tree.path,
+              });
+            } catch {
+              // 已移除或不可读的上次工作树回退到项目目录。
+            }
+            if (!openGate.current.accepts(ticket)) return;
+          }
+        }
+        const previous = current.current;
+        if (previous) {
+          worktreeHistory.current.delete(previous.snapshot.path);
+          worktreeHistory.current.set(previous.snapshot.path, {
+            ...historyRef.current,
+            loading: false,
+            error: null,
+            failedRequest: null,
+          });
+          while (worktreeHistory.current.size > 12)
+            worktreeHistory.current.delete(
+              worktreeHistory.current.keys().next().value!,
+            );
+        }
+        const cached = withinProject
+          ? worktreeHistory.current.get(next.snapshot.path)
+          : undefined;
+        const wanted = withinProject
+          ? (cached?.reference ?? desired.current)
+          : "all";
+        const ref =
+          wanted === "all" ||
+          wanted === "HEAD" ||
+          next.snapshot.refs.some((item) => item.fullName === wanted)
+            ? wanted
+            : "all";
         stateGate.current.invalidate();
         historyGate.current.invalidate();
         flight.current = null;
@@ -220,21 +285,49 @@ export function useRepository() {
         setRefreshing(false);
         current.current = next;
         setProject(next);
+        identityRef.current = original;
+        setIdentity(original);
+        try {
+          localStorage.setItem(
+            "oil-git.worktree." + original.path,
+            next.snapshot.path,
+          );
+        } catch {
+          /* 当前观察仍然有效，设置留在本次会话。 */
+        }
         failedOpen.current = null;
         setSnapshotError(null);
-        desired.current = "all";
-        setReference("all");
-        setHistoryValue(empty);
+        desired.current = ref;
+        setReference(ref);
+        setHistoryValue(
+          cached?.revision === next.snapshot.historyRevision &&
+            cached.reference === ref
+            ? { ...cached, snapshot: next.snapshot }
+            : { ...empty, reference: ref, requestedReference: ref },
+        );
         setViewRequest(
           view ? { repoId: next.repoId, view, serial: ticket } : null,
         );
-        void loadHistory("all", false, next);
-        const activation = recentWriteQueue.current.then(() =>
-          request("activate_repository", {
+        if (
+          !cached ||
+          cached.revision !== next.snapshot.historyRevision ||
+          cached.reference !== ref
+        )
+          void loadHistory(ref, false, next);
+        const activation = recentWriteQueue.current.then(async () => {
+          if (!withinProject && opened.repoId !== next.repoId)
+            await request("activate_repository", {
+              repoId: opened.repoId,
+              remember: !forgottenForThisOpen.has(original.path),
+            });
+          return request("activate_repository", {
             repoId: next.repoId,
-            remember: !forgottenForThisOpen.has(next.snapshot.path),
-          }),
-        );
+            remember:
+              !withinProject &&
+              opened.repoId === next.repoId &&
+              !forgottenForThisOpen.has(original.path),
+          });
+        });
         recentWriteQueue.current = activation.then(
           () => undefined,
           () => undefined,
@@ -263,6 +356,33 @@ export function useRepository() {
       }
     },
     [loadHistory],
+  );
+  const switchWorktree = useCallback(
+    async (path: string) => {
+      const target = current.current;
+      if (!target) return;
+      if (path === target.snapshot.path) {
+        openGate.current.invalidate();
+        failedOpen.current = null;
+        setOpening(false);
+        setOpenError(null);
+        return;
+      }
+      const tree = target.snapshot.worktrees.find((item) => item.path === path);
+      if (!tree?.available || tree.bare) {
+        openGate.current.invalidate();
+        failedOpen.current = null;
+        setOpening(false);
+        setOpenError({
+          kind: "path",
+          message: "工作树目录不可用。",
+          messageKey: "unavailableWorktree",
+        });
+        return;
+      }
+      await openPath(path, undefined, undefined, true);
+    },
+    [openPath],
   );
   const forgetRecent = useCallback(async (path: string) => {
     if (!path.trim()) {
@@ -357,7 +477,12 @@ export function useRepository() {
       if (document.visibilityState === "visible")
         timer = setTimeout(() => {
           if (retryOpen && target)
-            void openPath(target.path, target.view, target.forgotten);
+            void openPath(
+              target.path,
+              target.view,
+              target.forgotten,
+              target.withinProject,
+            );
           else void refresh();
         }, 750);
     };
@@ -423,6 +548,7 @@ export function useRepository() {
   }, [openPath]);
   return {
     project,
+    identity,
     recents,
     recentError,
     forgettingRecent,
@@ -446,13 +572,20 @@ export function useRepository() {
     viewRequest,
     choose,
     openPath,
+    switchWorktree,
     forgetRecent,
     refresh,
     checkGit,
     retryError: () => {
       if (openError) {
         const target = failedOpen.current;
-        if (target) void openPath(target.path, target.view);
+        if (target)
+          void openPath(
+            target.path,
+            target.view,
+            target.forgotten,
+            target.withinProject,
+          );
         else void choose();
       } else void refresh(true);
     },

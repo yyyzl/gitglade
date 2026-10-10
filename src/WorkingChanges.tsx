@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "./Icon";
 import { CopyButton } from "./CopyButton";
+import { CommitMetadata } from "./CommitMetadata";
 import type { DiffOrigin } from "./types";
 import { DiffView } from "./DiffView";
-import type { FileState, Diff, GitError } from "./types";
+import type { FileState, Diff, GitError, CommitDetail } from "./types";
 import type { WorkingFile } from "./useWorkingCopy";
 import { FileIcon } from "./FileIcon";
 import { ReadStatus } from "./ReadStatus";
@@ -290,6 +291,7 @@ export function SourceEditor({
   requestKey,
   origin,
   active = true,
+  commit,
 }: {
   files: FileState[];
   file: WorkingFile | null;
@@ -300,6 +302,7 @@ export function SourceEditor({
   requestKey?: string;
   origin?: DiffOrigin;
   active?: boolean;
+  commit?: CommitDetail;
 }) {
   const { t } = useI18n();
   const [preferSplit, setPreferSplit] = useState(true),
@@ -315,8 +318,9 @@ export function SourceEditor({
     return () => observer.disconnect();
   }, []);
   const selected = files.find((f) => f.path === file?.path);
-  const labels: [string, string] =
-    file?.mode === "staged"
+  const labels: [string, string] = commit
+    ? [commit.parents.length ? t("第一个父提交") : t("尚不存在"), t("所选提交")]
+    : file?.mode === "staged"
       ? [t("上次提交"), t("暂存区")]
       : selected?.untracked
         ? [t("尚不存在"), t("工作区")]
@@ -337,8 +341,17 @@ export function SourceEditor({
                 <strong title={file.path}>{file.path.split("/").pop()}</strong>
                 <CopyButton text={file.path} label={t("复制文件路径")} />
               </div>
-              <span>{captions[file.mode]}</span>
+              <span className="diff-path" title={file.path}>
+                {file.path.includes("/")
+                  ? file.path.slice(0, file.path.lastIndexOf("/"))
+                  : captions[file.mode]}
+              </span>
             </div>
+            {commit && (
+              <div className="editor-commit" title={commit.subject}>
+                <CommitMetadata detail={commit} />
+              </div>
+            )}
             {!selected?.conflict &&
               !diff?.lfs &&
               !diff?.preview &&
@@ -368,7 +381,10 @@ export function SourceEditor({
               <button onClick={retry}>{t("重试")}</button>
             </div>
           )}
-          <div className="working-diff" key={file.path + file.mode}>
+          <div
+            className="working-diff diff-scroll"
+            key={commit ? commit.hash : file.path + file.mode}
+          >
             <ReadStatus
               busy={loading && !error}
               requestKey={requestKey ?? file.path + file.mode}

@@ -22,11 +22,14 @@ export default function App() {
   const working = useWorkingCopy(repo.project, view === "source");
   const [selection, setSelection] = useState<Selection>(null);
   const selectionOwner = useRef<string | null>(null);
+  const selections = useRef(new Map<string, Selection>());
   const [panel, setPanel] = useState<{
     selection: Selection;
     repoId: string;
   } | null>(null);
   const [locate, setLocate] = useState(0);
+  const [commitFilesTarget, setCommitFilesTarget] =
+    useState<HTMLDivElement | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const panes = usePaneLayout(shell);
   const [detailState, setDetailState] = useState<
@@ -91,10 +94,17 @@ export default function App() {
       : undefined;
   const pick = (value: Selection) => {
     selectionOwner.current = repo.project?.repoId ?? null;
+    if (selectionOwner.current) {
+      selections.current.set(selectionOwner.current, value);
+      while (selections.current.size > 12)
+        selections.current.delete(selections.current.keys().next().value!);
+    }
     setSelection(value);
   };
   useEffect(() => {
-    setSelection(null);
+    const owner = repo.project?.repoId ?? null;
+    selectionOwner.current = owner;
+    setSelection(owner ? (selections.current.get(owner) ?? null) : null);
     clearLocate();
   }, [repo.project?.repoId]);
   useEffect(() => {
@@ -123,7 +133,11 @@ export default function App() {
         void repo.refresh(true);
       }
       if (e.key === "Escape") {
-        setSelection(null);
+        if (viewRef.current === "history") {
+          if (selectionOwner.current)
+            selections.current.set(selectionOwner.current, null);
+          setSelection(null);
+        }
         clearLocate();
       }
     };
@@ -176,7 +190,7 @@ export default function App() {
   };
   const locateHead = () => {
     switchView("history");
-    setSelection(null);
+    pick(null);
     clearLocate();
     if (
       graphSnapshot?.historyRevision === s?.historyRevision &&
@@ -258,7 +272,7 @@ export default function App() {
       <header className="toolbar" data-tauri-drag-region>
         <Dropdown
           className="project-dropdown"
-          value={s?.path ?? ""}
+          value={repo.identity?.path ?? s?.path ?? ""}
           options={recentOptions}
           onChange={(v) => {
             clearLocate();
@@ -271,30 +285,65 @@ export default function App() {
             ) : undefined
           }
           busy={repo.forgettingRecent}
-          label={s?.name || t("打开项目")}
+          label={repo.identity?.name || s?.name || t("打开项目")}
           icon="folder"
           disabled={!repo.gitStatus.version}
         />
         {s && (
           <>
             <span className="toolbar-divider" />
-            <span className="current-branch" title={s.branch || t("分离 HEAD")}>
+            <span
+              className="current-branch"
+              tabIndex={0}
+              aria-describedby="current-branch-full-name"
+            >
               <Icon name="branch" size={16} />
-              {s.branch || t("分离 HEAD")}
+              <span className="current-branch-name">
+                {s.branch || t("分离 HEAD")}
+              </span>
+              <span
+                className="current-branch-tooltip"
+                id="current-branch-full-name"
+                role="tooltip"
+              >
+                {s.branch || t("分离 HEAD")}
+              </span>
             </span>
             <span className="toolbar-spacer" data-tauri-drag-region />
             {s.worktrees.length > 1 && (
               <Dropdown
                 className="tree-dropdown"
                 value={s.path}
-                options={s.worktrees.map((w) => ({
+                // Git 保留主工作树在首项的顺序；当前查看项由目录匹配决定。
+                options={s.worktrees.map((w, index) => ({
                   value: w.path,
-                  label: w.detached ? t("分离 HEAD") : w.branch || t("工作树"),
-                  description: w.path,
+                  label:
+                    (w.path.split(/[\\/]/).filter(Boolean).pop() ?? w.path) +
+                    (index === 0 && !w.bare ? " · " + t("主工作树") : ""),
+                  description:
+                    (w.detached ? t("分离 HEAD") : w.branch || t("工作树")) +
+                    " · " +
+                    w.path,
                   disabled: !w.available || w.bare,
                 }))}
-                onChange={(v) => void repo.openPath(v)}
+                onChange={(v) => {
+                  clearLocate();
+                  void repo.switchWorktree(v);
+                }}
                 label={t("观察工作树")}
+                displayValue={
+                  <>
+                    <span className="ref-prefix">
+                      {t("工作树：{name}", {
+                        name:
+                          s.path.split(/[\\/]/).filter(Boolean).pop() ?? s.path,
+                      })}
+                    </span>
+                    {s.worktrees[0].path === s.path && !s.worktrees[0].bare && (
+                      <span className="worktree-main">{t("主工作树")}</span>
+                    )}
+                  </>
+                }
                 icon="stack"
               />
             )}
@@ -422,44 +471,7 @@ export default function App() {
         </main>
       ) : (
         <main className="repository-workbench" data-view={view}>
-          <aside className="persistent-sidebar" aria-label={t("当前工作区")}>
-            <header className="sidebar-heading">
-              <h1>{t("源代码管理")}</h1>
-              <span title={t("发生变化的文件数量")}>
-                {t("{count} 个文件", { count: s!.files.length })}
-              </span>
-            </header>
-            {s!.operation && (
-              <div
-                className={
-                  "operation-status " + (conflicts ? "conflict-text" : "")
-                }
-              >
-                {t(s!.operation)}
-                {conflicts
-                  ? t("暂停 · {count} 个冲突文件", { count: conflicts })
-                  : t("进行中")}
-              </div>
-            )}
-            <ChangesSidebar
-              key={repo.project.repoId}
-              files={s!.files}
-              file={working.file}
-              onFile={(file) => {
-                working.choose(file);
-                switchView("source");
-              }}
-            />
-          </aside>
-          <div
-            className="resize-handle sidebar-resize-handle"
-            role="separator"
-            aria-label={t("调整侧栏宽度")}
-            aria-orientation="vertical"
-            tabIndex={0}
-            {...panes.handle("sidebar")}
-          />
-          <section className="repository-main" aria-label={t("仓库内容")}>
+          <aside className="persistent-sidebar" aria-label={t("仓库导航")}>
             <header className="viewbar">
               <div
                 className="view-tabs"
@@ -471,7 +483,7 @@ export default function App() {
                 <button
                   role="tab"
                   aria-selected={view === "source"}
-                  aria-controls="source-view"
+                  aria-controls="source-view source-diff"
                   id="source-tab"
                   onClick={() => switchView("source")}
                   onKeyDown={(e) => {
@@ -482,12 +494,12 @@ export default function App() {
                   }}
                 >
                   <Icon name="changes" size={15} />
-                  {t("源码")}
+                  {t("工作区")}
                 </button>
                 <button
                   role="tab"
                   aria-selected={view === "history"}
-                  aria-controls="history-view"
+                  aria-controls="history-view history-diff"
                   id="history-tab"
                   onClick={() => switchView("history")}
                   onKeyDown={(e) => {
@@ -498,47 +510,39 @@ export default function App() {
                   }}
                 >
                   <Icon name="branch" size={15} />
-                  {t("分支")}
+                  {t("提交历史")}
                 </button>
               </div>
-              <span className="toolbar-spacer" />
-              {view === "history" && (
-                <Dropdown
-                  value={repo.reference}
-                  options={filters}
-                  onChange={selectHistoryFilter}
-                  label={t("筛选提交历史")}
-                  searchable
-                  icon="filter"
-                />
-              )}
             </header>
             <div
               className={"view-source " + (view === "source" ? "active" : "")}
               id="source-view"
               role="tabpanel"
               aria-labelledby="source-tab"
+              hidden={view !== "source"}
               inert={view !== "source"}
             >
-              <SourceEditor
+              {s!.operation && (
+                <div
+                  className={
+                    "operation-status " + (conflicts ? "conflict-text" : "")
+                  }
+                >
+                  {t(s!.operation)}
+                  {conflicts
+                    ? t("暂停 · {count} 个冲突文件", { count: conflicts })
+                    : t("进行中")}
+                </div>
+              )}
+
+              <ChangesSidebar
+                key={repo.project.repoId}
                 files={s!.files}
                 file={working.file}
-                diff={working.diff}
-                error={working.error}
-                loading={working.loading}
-                requestKey={working.requestKey}
-                retry={working.retry}
-                active={view === "source"}
-                origin={
-                  repo.project && working.file
-                    ? {
-                        repoId: repo.project.repoId,
-                        path: working.file.path,
-                        mode: working.file.mode,
-                        changesRevision: working.diffRevision,
-                      }
-                    : undefined
-                }
+                onFile={(file) => {
+                  working.choose(file);
+                  switchView("source");
+                }}
               />
             </div>
             <div
@@ -546,9 +550,27 @@ export default function App() {
               id="history-view"
               role="tabpanel"
               aria-labelledby="history-tab"
+              hidden={view !== "history"}
               inert={view !== "history"}
             >
-              <div className="workspace" data-expanded={detailOpen}>
+              <div
+                className="history-navigation"
+                data-expanded={
+                  detailOpen && effectiveSelection?.kind === "commit"
+                }
+              >
+                <header className="history-toolbar">
+                  {view === "history" && (
+                    <Dropdown
+                      value={repo.reference}
+                      options={filters}
+                      onChange={selectHistoryFilter}
+                      label={t("筛选提交历史")}
+                      searchable
+                      icon="filter"
+                    />
+                  )}
+                </header>
                 <section className="history-panel" aria-label={t("仓库历史")}>
                   <div className="detail-pending">
                     <ReadStatus
@@ -582,9 +604,7 @@ export default function App() {
                   />
                   {repo.history.commits.length ? (
                     <HistoryGraph
-                      active={
-                        view === "history" && !(panes.compact && detailOpen)
-                      }
+                      active={view === "history"}
                       commits={repo.history.commits}
                       snapshot={graphSnapshot!}
                       selected={
@@ -644,34 +664,82 @@ export default function App() {
                     )}
                   </div>
                 </section>
-                <div
-                  className="resize-handle"
-                  role="separator"
-                  aria-label={t("调整详情宽度")}
-                  aria-orientation="vertical"
-                  tabIndex={detailOpen ? 0 : -1}
-                  {...panes.handle("detail")}
-                />
-                <div
-                  className="detail-shell"
-                  aria-hidden={!detailOpen}
-                  inert={!detailOpen}
-                >
-                  <Details
-                    commits={repo.history.commits}
-                    key={repo.project.repoId}
-                    project={repo.project}
-                    selection={
-                      effectiveSelection ?? shownPanel?.selection ?? null
-                    }
-                    active={!!effectiveSelection && view === "history"}
-                    keepPrevious={wasDetailOpen.current}
-                    subject={selectedSubject}
-                    onStateChange={reportDetail}
-                    onClose={() => setSelection(null)}
-                  />
-                </div>
+                <div className="history-files" ref={setCommitFilesTarget} />
               </div>
+            </div>
+          </aside>
+          <div
+            className="resize-handle sidebar-resize-handle"
+            role="separator"
+            aria-label={t("调整侧栏宽度")}
+            aria-orientation="vertical"
+            tabIndex={0}
+            {...panes.handle("sidebar")}
+          />
+          <section className="repository-main" aria-label={t("仓库内容")}>
+            <div
+              className={"view-source " + (view === "source" ? "active" : "")}
+              id="source-diff"
+              role="region"
+              aria-label={t("工作区差异")}
+              hidden={view !== "source"}
+              inert={view !== "source"}
+            >
+              <SourceEditor
+                files={s!.files}
+                file={working.file}
+                diff={working.diff}
+                error={working.error}
+                loading={working.loading}
+                requestKey={working.requestKey}
+                retry={working.retry}
+                active={view === "source"}
+                origin={
+                  repo.project && working.file
+                    ? {
+                        repoId: repo.project.repoId,
+                        path: working.file.path,
+                        mode: working.file.mode,
+                        changesRevision: working.diffRevision,
+                      }
+                    : undefined
+                }
+              />
+            </div>
+            <div
+              className={"view-history " + (view === "history" ? "active" : "")}
+              id="history-diff"
+              role="region"
+              aria-label={t("提交差异")}
+              hidden={view !== "history"}
+              inert={view !== "history"}
+            >
+              <div
+                className="commit-reader"
+                data-selected={!!effectiveSelection}
+                hidden={!effectiveSelection}
+                inert={!effectiveSelection}
+              >
+                <Details
+                  filesTarget={commitFilesTarget}
+                  commits={repo.history.commits}
+                  project={repo.project}
+                  selection={
+                    effectiveSelection ?? shownPanel?.selection ?? null
+                  }
+                  active={!!effectiveSelection && view === "history"}
+                  keepPrevious={wasDetailOpen.current}
+                  subject={selectedSubject}
+                  onStateChange={reportDetail}
+                  onClose={() => pick(null)}
+                />
+              </div>
+              {!effectiveSelection && (
+                <div className="editor-empty">
+                  <Icon name="changes" size={25} />
+                  <p>{t("选择提交，查看文件差异")}</p>
+                </div>
+              )}
             </div>
           </section>
         </main>

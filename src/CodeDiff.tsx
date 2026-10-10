@@ -443,6 +443,11 @@ export function CodeDiff(props: PatchCodeDiffProps | RawCodeDiffProps) {
         }
         if (raf.current !== null) cancelAnimationFrame(raf.current);
         raf.current = null;
+        // 清空行高后，未改变自然高度的换行行也必须重新报告尺寸。
+        for (const row of rowNodes.current.values()) {
+          observer.unobserve(row);
+          observer.observe(row);
+        }
       }
 
       const rowEntries = entries.filter((entry) =>

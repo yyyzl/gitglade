@@ -839,6 +839,11 @@ fn branches_merge_stash_reset_detached_and_worktree() {
     assert_eq!(trees.len(), 2);
     assert!(trees.iter().any(|w| w.current));
     let normalized = f.git.normalize(&tree).unwrap();
+    let main = f.git.normalize(&f.repo).unwrap();
+    let from_linked = f.git.worktrees(&normalized).unwrap();
+    assert_eq!(from_linked[0].path, main.to_string_lossy());
+    assert!(!from_linked[0].current);
+    assert!(from_linked[1].current);
     assert!(f.git.snapshot(&normalized).unwrap().files.is_empty());
     assert!(tree.join(".git").is_file());
 }

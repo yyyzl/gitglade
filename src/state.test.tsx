@@ -119,8 +119,225 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
+  localStorage.clear();
 });
 describe("真实组件的请求顺序", () => {
+  const treeProject = (path: string) => ({
+    ...project(path),
+    snapshot: {
+      ...snapshot(path),
+      worktrees: [
+        {
+          id: "/root",
+          path: "/root",
+          branch: "feature",
+          current: path === "/root",
+          available: true,
+          bare: false,
+        },
+        {
+          id: "/trees/topic",
+          path: "/trees/topic",
+          branch: "main",
+          current: path === "/trees/topic",
+          available: true,
+          bare: false,
+        },
+      ],
+    },
+  });
+
+  it("项目内切换工作树保留项目身份与筛选，不添加最近项目并能返回主目录", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    await answer(take("get_history"), {
+      commits: [],
+      hasMore: false,
+      revision: "one",
+    });
+    act(() => {
+      result.current.filter("HEAD");
+    });
+    await answer(take("get_history"), {
+      commits: [],
+      hasMore: false,
+      revision: "one",
+    });
+    const originalRequest = vi.mocked(request).getMockImplementation()!;
+    vi.mocked(request).mockImplementation(((
+      command: string,
+      args?: Record<string, unknown>,
+    ) =>
+      command === "recent_repositories"
+        ? Promise.resolve([{ path: "/root", name: "/root" }])
+        : originalRequest(command, args)) as typeof request);
+    act(() => {
+      void result.current.switchWorktree("/trees/topic");
+    });
+    await answer(take("open_repository"), treeProject("/trees/topic"));
+    const history = take("get_history");
+    expect(history.args).toMatchObject({
+      repoId: "/trees/topic",
+      reference: "HEAD",
+    });
+    await answer(history, { commits: [], hasMore: false, revision: "one" });
+    expect(result.current.identity).toEqual({ path: "/root", name: "/root" });
+    expect(result.current.project?.repoId).toBe("/trees/topic");
+    expect(request).toHaveBeenCalledWith("activate_repository", {
+      repoId: "/trees/topic",
+      remember: false,
+    });
+    expect(result.current.recents).toEqual([{ path: "/root", name: "/root" }]);
+    expect(localStorage.getItem("oil-git.worktree./root")).toBe("/trees/topic");
+    act(() => {
+      void result.current.switchWorktree("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    expect(result.current.project?.repoId).toBe("/root");
+    expect(result.current.reference).toBe("HEAD");
+    expect(queue.some((item) => item.command === "get_history")).toBe(false);
+  });
+
+  it("工作树切换失败保留原目录，重试仍不新增最近项目", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    act(() => {
+      void result.current.switchWorktree("/trees/topic");
+    });
+    await fail(take("open_repository"), { kind: "io", message: "目录不可读" });
+    expect(result.current.project?.repoId).toBe("/root");
+    expect(result.current.identity?.path).toBe("/root");
+    expect(localStorage.getItem("oil-git.worktree./root")).toBe("/root");
+    act(() => result.current.retryError());
+    const retry = take("open_repository");
+    expect(retry.args.path).toBe("/trees/topic");
+    await answer(retry, treeProject("/trees/topic"));
+    expect(request).toHaveBeenCalledWith("activate_repository", {
+      repoId: "/trees/topic",
+      remember: false,
+    });
+  });
+
+  it("迟到的工作树响应不能覆盖用户后来打开的项目", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    act(() => {
+      void result.current.switchWorktree("/trees/topic");
+    });
+    const old = take("open_repository");
+    act(() => {
+      void result.current.openPath("/other");
+    });
+    await answer(take("open_repository"), project("/other"));
+    await answer(old, treeProject("/trees/topic"));
+    expect(result.current.project?.repoId).toBe("/other");
+    expect(result.current.identity?.path).toBe("/other");
+    expect(request).not.toHaveBeenCalledWith("activate_repository", {
+      repoId: "/trees/topic",
+      remember: false,
+    });
+  });
+
+  it("再次打开项目恢复上次工作树，记录仍属于项目目录", async () => {
+    localStorage.setItem("oil-git.worktree./root", "/trees/topic");
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    const restore = take("open_repository");
+    expect(restore.args.path).toBe("/trees/topic");
+    expect(result.current.project).toBeNull();
+    await answer(restore, treeProject("/trees/topic"));
+    expect(result.current.identity?.path).toBe("/root");
+    expect(result.current.project?.snapshot.path).toBe("/trees/topic");
+    expect(request).toHaveBeenCalledWith("activate_repository", {
+      repoId: "/root",
+      remember: true,
+    });
+    expect(request).toHaveBeenCalledWith("activate_repository", {
+      repoId: "/trees/topic",
+      remember: false,
+    });
+  });
+
+  it("显式 CLI 目录优先于上次工作树，无效恢复目录回退项目", async () => {
+    localStorage.setItem("oil-git.worktree./root", "/trees/topic");
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/root", "history");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    expect(result.current.project?.snapshot.path).toBe("/root");
+    expect(queue.some((item) => item.command === "open_repository")).toBe(
+      false,
+    );
+    localStorage.setItem("oil-git.worktree./root", "/missing");
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    await answer(take("open_repository"), treeProject("/root"));
+    expect(result.current.project?.snapshot.path).toBe("/root");
+    expect(queue.some((item) => item.command === "open_repository")).toBe(
+      false,
+    );
+  });
+
+  it("同名文件在工作树间的选择与缓存隔离，旧目录响应不能覆盖新目录", async () => {
+    const checkout = (path: string) => ({
+      ...project(path),
+      snapshot: {
+        ...snapshot(path),
+        files: [
+          {
+            path: "same.txt",
+            oldPath: null,
+            xy: "MM",
+            conflict: false,
+            untracked: false,
+            staged: true,
+            unstaged: true,
+          },
+        ],
+      },
+    });
+    const { result, rerender } = renderHook(
+      ({ path }) => useWorkingCopy(checkout(path), true),
+      { initialProps: { path: "/root" } },
+    );
+    take("get_diff");
+    act(() => result.current.choose({ path: "same.txt", mode: "staged" }));
+    const old = take("get_diff");
+    rerender({ path: "/trees/topic" });
+    const linked = take("get_diff");
+    expect(linked.args).toMatchObject({
+      repoId: "/trees/topic",
+      mode: "unstaged",
+    });
+    await answer(linked, commitDiff("工作树内容"));
+    await answer(old, commitDiff("迟到的主目录内容"));
+    expect(result.current.diff?.patch).toContain("工作树内容");
+    expect(result.current.diff?.patch).not.toContain("主目录内容");
+    rerender({ path: "/root" });
+    const back = take("get_diff");
+    expect(back.args).toMatchObject({ repoId: "/root", mode: "staged" });
+    await answer(back, commitDiff("主目录暂存内容"));
+    expect(result.current.diff?.patch).toContain("主目录暂存内容");
+  });
   it("移除后较早的打开响应不能恢复记录，主动重开可以加入", async () => {
     let stored = [{ path: "/slow", name: "slow" }];
     let completeOpen!: (value: Project) => void;
@@ -894,20 +1111,20 @@ describe("真实组件的请求顺序", () => {
       const old = take("get_commit_view");
       rerender(detail("b"));
       const latest = take("get_commit_view");
-      expect(screen.getByText("A")).toBeTruthy();
+      expect(screen.getByTitle("A")).toBeTruthy();
       expect(animate).not.toHaveBeenCalled();
       await answer(latest, combined("b", "B", "内容 B"));
-      expect(screen.getByText("B")).toBeTruthy();
+      expect(screen.getByTitle("B")).toBeTruthy();
       expect(screen.getByText("+内容 B")).toBeTruthy();
       expect(animate.mock.calls[0][0]).toEqual([
         { transform: "translateY(-12px)", opacity: 0.94 },
         { transform: "translateY(0)", opacity: 1 },
       ]);
       await answer(old, combined("c", "C", "过期内容"));
-      expect(screen.queryByText("C")).toBeNull();
+      expect(screen.queryByTitle("C")).toBeNull();
       expect(animate).toHaveBeenCalledTimes(1);
       rerender(detail("a"));
-      await waitFor(() => expect(screen.getByText("A")).toBeTruthy());
+      await waitFor(() => expect(screen.getByTitle("A")).toBeTruthy());
       expect(animate.mock.calls[1][0]).toEqual([
         { transform: "translateY(12px)", opacity: 0.94 },
         { transform: "translateY(0)", opacity: 1 },
@@ -935,7 +1152,7 @@ describe("真实组件的请求顺序", () => {
     expect(screen.queryByText("提交详情")).toBeNull();
     expect(screen.queryByRole("heading")).toBeNull();
     await answer(read, combined(selection.hash, "真实提交", "真实差异"));
-    expect(screen.getByText("真实提交")).toBeTruthy();
+    expect(screen.getByTitle("真实提交")).toBeTruthy();
     expect(screen.getByText("+真实差异")).toBeTruthy();
     expect(queue).toHaveLength(0);
   });
@@ -1008,9 +1225,9 @@ describe("真实组件的请求顺序", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /second.txt/ }));
     const second = take("get_commit_view");
-    expect(container.querySelector(".diff-path")?.textContent).toBe(
-      "first.txt",
-    );
+    expect(
+      container.querySelector(".file-heading-line strong")?.textContent,
+    ).toBe("first.txt");
     act(() => vi.advanceTimersByTime(200));
     expect(screen.getByRole("status").textContent).toContain("正在更新");
     fireEvent.click(screen.getByRole("button", { name: /first.txt/ }));
@@ -1021,9 +1238,9 @@ describe("真实组件的请求顺序", () => {
     );
     expect(screen.getByText("+首个文件")).toBeTruthy();
     expect(screen.queryByText("+第二个文件")).toBeNull();
-    expect(container.querySelector(".diff-path")?.textContent).toBe(
-      "first.txt",
-    );
+    expect(
+      container.querySelector(".file-heading-line strong")?.textContent,
+    ).toBe("first.txt");
   });
   it("换版本保留文件选择，失败保留整组旧结果并可重试", async () => {
     const p = project("main"),
@@ -1048,7 +1265,7 @@ describe("真实组件的请求顺序", () => {
     expect(update.args.path).toBe("second.txt");
     expect(update.args.expectedHistoryRevision).toBe("two");
     await fail(update, { kind: "io", message: "读取失败" });
-    expect(screen.getByText("旧标题")).toBeTruthy();
+    expect(screen.getByTitle("旧标题")).toBeTruthy();
     expect(screen.getByText("+旧第二个文件")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("保留上次");
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
@@ -1056,7 +1273,7 @@ describe("真实组件的请求顺序", () => {
       take("get_commit_view"),
       combined(selection.hash, "新标题", "新第二个文件", "second.txt"),
     );
-    expect(screen.getByText("新标题")).toBeTruthy();
+    expect(screen.getByTitle("新标题")).toBeTruthy();
     expect(screen.getByText("+新第二个文件")).toBeTruthy();
   });
   it("旧版本与旧项目响应不能覆盖新内容", async () => {
@@ -1073,8 +1290,8 @@ describe("真实组件的请求顺序", () => {
     const latest = take("get_commit_view");
     await answer(latest, combined(selection.hash, "新标题", "新内容"));
     await answer(old, combined(selection.hash, "旧标题", "旧内容"));
-    expect(screen.getByText("新标题")).toBeTruthy();
-    expect(screen.queryByText("旧标题")).toBeNull();
+    expect(screen.getByTitle("新标题")).toBeTruthy();
+    expect(screen.queryByTitle("旧标题")).toBeNull();
     rerender(
       <Details
         project={project("other")}
@@ -1082,11 +1299,11 @@ describe("真实组件的请求顺序", () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.queryByText("新标题")).toBeNull();
+    expect(screen.queryByTitle("新标题")).toBeNull();
     const closed = take("get_commit_view");
     unmount();
     await answer(closed, combined(selection.hash, "关闭后的响应", "无效"));
-    expect(screen.queryByText("关闭后的响应")).toBeNull();
+    expect(screen.queryByTitle("关闭后的响应")).toBeNull();
   });
   it("同一提交换版本移除所选文件时，回退该版本默认文件", async () => {
     const p = project("main"),
@@ -1144,7 +1361,7 @@ describe("真实组件的请求顺序", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "读取 bbbbbbbb 失败，当前显示 aaaaaaaa",
     );
-    expect(screen.getByText("提交 A")).toBeTruthy();
+    expect(screen.getByTitle("提交 A")).toBeTruthy();
     expect(screen.getByText("+内容 A")).toBeTruthy();
   });
   it("旧打开请求的最近项目列表不能覆盖最新列表", async () => {

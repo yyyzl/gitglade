@@ -101,6 +101,7 @@ beforeEach(() => {
     },
     choose: vi.fn(),
     openPath: vi.fn(),
+    switchWorktree: vi.fn(),
     refresh: vi.fn(),
     checkGit: vi.fn(),
     clearError: vi.fn(),
@@ -131,7 +132,119 @@ const resolve = async (index: number, text: string) =>
       conflict: null,
     }),
   );
-describe("常驻侧栏与右侧视图", () => {
+describe("两栏导航与共享差异", () => {
+  it("提交文件在左侧，右侧共用对比组件，来源往返保留所选文件", async () => {
+    render(<App />);
+    const sidebar = screen.getByRole("complementary", { name: "仓库导航" });
+    const right = screen.getByRole("region", { name: "仓库内容" });
+    expect(sidebar.contains(screen.getByRole("tab", { name: "工作区" }))).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "真实提交" }));
+    expect(pending[0].args).toMatchObject({ commit: sha, path: null });
+    const result = (path: string, content: string) => ({
+      detail: {
+        hash: sha,
+        parents: [],
+        subject: "真实提交",
+        author: "测试",
+        date: "2026-01-01",
+        comparison: "首次提交",
+        files: ["first.txt", "second.txt"].map((path) => ({
+          path,
+          oldPath: null,
+          status: "A",
+        })),
+      },
+      filePath: path,
+      diff: {
+        patch: "@@ -0,0 +1 @@\n+" + content,
+        truncated: false,
+        binary: false,
+        note: null,
+        conflict: null,
+      },
+    });
+    await act(async () =>
+      pending[0].resolve(result("first.txt", "首个提交文件")),
+    );
+    const second = screen.getByRole("button", { name: "second.txt" });
+    expect(sidebar.contains(second)).toBe(true);
+    expect(right.contains(second)).toBe(false);
+    const viewport = right.querySelector(".code-diff-viewport");
+    fireEvent.click(second);
+    expect(pending[1].args.path).toBe("second.txt");
+    expect(right.querySelector(".code-diff-viewport")).toBe(viewport);
+    await act(async () =>
+      pending[1].resolve(result("second.txt", "第二个提交文件")),
+    );
+    expect(right.querySelector(".code-diff-viewport")).toBe(viewport);
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
+    await resolve(2, "工作区文件");
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(screen.getByRole("tab", { name: "提交历史" }));
+    await act(async () => {});
+    expect(pending).toHaveLength(3);
+    expect(
+      screen
+        .getByRole("button", { name: "second.txt" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(right.querySelector("#history-diff .code-diff-viewport")).toBe(
+      viewport,
+    );
+    expect(
+      screen.getByRole("region", { name: "提交差异" }).textContent,
+    ).toContain("第二个提交文件");
+  });
+
+  it("工作树以目录显示，主工作树与当前查看项分开，切换保持项目名", async () => {
+    repo.identity = { path: "/fixture", name: "fixture" };
+    repo.recents = [{ path: "/fixture", name: "fixture" }];
+    repo.project = {
+      repoId: "linked",
+      snapshot: {
+        ...project.snapshot,
+        path: "/trees/topic",
+        name: "topic",
+        worktrees: [
+          {
+            id: "repo",
+            path: "/fixture",
+            branch: "feature",
+            current: false,
+            available: true,
+            bare: false,
+          },
+          {
+            id: "linked",
+            path: "/trees/topic",
+            branch: "main",
+            current: true,
+            available: true,
+            bare: false,
+          },
+        ],
+      },
+    };
+    render(<App />);
+    expect(screen.getByRole("button", { name: "fixture" })).toBeTruthy();
+    expect(screen.getByText("工作树：topic")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "观察工作树" }));
+    const main = await screen.findByRole("option", {
+      name: /fixture · 主工作树/,
+    });
+    expect(main.getAttribute("aria-selected")).toBe("false");
+    expect(
+      screen
+        .getByRole("option", { name: /topic/ })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(main.textContent).toContain("feature · /fixture");
+    fireEvent.click(main);
+    expect(repo.switchWorktree).toHaveBeenCalledWith("/fixture");
+    expect(repo.openPath).not.toHaveBeenCalled();
+  });
   it("切换语言即时翻译动态状态，同时保留视图、滚动和仓库节点", async () => {
     repo.project = {
       ...project,
@@ -228,7 +341,7 @@ describe("常驻侧栏与右侧视图", () => {
     expect(repo.openPath).not.toHaveBeenCalledWith("/other");
   });
 
-  it("选择文件切到源码，切回分支保留侧栏和历史滚动位置", async () => {
+  it("切换左侧来源保留文件选择、侧栏节点和历史滚动位置", async () => {
     const view = render(<App />);
     const sidebar = screen.getByLabelText("源代码管理文件列表");
     const graph = screen.getByLabelText(
@@ -237,41 +350,46 @@ describe("常驻侧栏与右侧视图", () => {
     graph.scrollTop = 190;
     fireEvent.scroll(graph);
     await act(async () => {});
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     fireEvent.click(screen.getByRole("button", { name: "file.txt · 未暂存" }));
     expect(
-      screen.getByRole("tab", { name: "源码" }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: "工作区" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByLabelText("源代码管理文件列表")).toBe(sidebar);
     expect(pending[0].args.mode).toBe("unstaged");
     await resolve(0, "工作区内容");
     graph.scrollTop = 0;
     fireEvent.scroll(graph);
-    fireEvent.click(screen.getByRole("tab", { name: "分支" }));
+    fireEvent.click(screen.getByRole("tab", { name: "提交历史" }));
     expect(graph.scrollTop).toBe(190);
     expect(screen.getByLabelText("源代码管理文件列表")).toBe(sidebar);
-    fireEvent.click(screen.getByRole("tab", { name: "源码" }));
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     expect(sidebar.querySelector(".selected")?.getAttribute("title")).toBe(
       "file.txt",
     );
   });
   it("左右分组选择的过期差异不能覆盖最新范围", async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     const rows = screen.getAllByRole("button", { name: /^file\.txt/ });
     fireEvent.click(rows[0]);
-    expect(pending[0].args.mode).toBe("staged");
+    expect(pending[1].args.mode).toBe("staged");
     fireEvent.click(rows[1]);
-    expect(pending[1].args.mode).toBe("unstaged");
-    await resolve(1, "最新工作区");
-    await resolve(0, "旧暂存响应");
+    expect(pending[2].args.mode).toBe("unstaged");
+    await resolve(2, "最新工作区");
+    await resolve(1, "旧暂存响应");
     expect(screen.getByText("+最新工作区")).toBeTruthy();
     expect(screen.queryByText("+旧暂存响应")).toBeNull();
   });
-  it("源码里的返回 HEAD 会切换到分支视图", () => {
+  it("工作区里的返回 HEAD 会切换到提交历史", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     fireEvent.click(screen.getByRole("button", { name: "file.txt · 未暂存" }));
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     expect(
-      screen.getByRole("tab", { name: "分支" }).getAttribute("aria-selected"),
+      screen
+        .getByRole("tab", { name: "提交历史" })
+        .getAttribute("aria-selected"),
     ).toBe("true");
   });
   it("手动筛选会取消尚未完成的返回 HEAD 定位", async () => {
@@ -301,7 +419,7 @@ describe("常驻侧栏与右侧视图", () => {
       "提交历史，使用上下方向键选择，回车查看详情",
     );
     const focus = vi.spyOn(graph, "focus");
-    fireEvent.click(screen.getByRole("tab", { name: "源码" }));
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     const locatedRequestId = repo.history.requestId;
     expect(repo.history.requestedReference).toBe("HEAD");
@@ -355,7 +473,7 @@ describe("常驻侧栏与右侧视图", () => {
       "提交历史，使用上下方向键选择，回车查看详情",
     );
     const focus = vi.spyOn(graph, "focus");
-    fireEvent.click(screen.getByRole("tab", { name: "源码" }));
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     const failedRequestId = repo.history.requestId;
     repo.history = {
@@ -405,7 +523,7 @@ describe("常驻侧栏与右侧视图", () => {
       "提交历史，使用上下方向键选择，回车查看详情",
     );
     const focus = vi.spyOn(graph, "focus");
-    fireEvent.click(screen.getByRole("tab", { name: "源码" }));
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     const requestId = repo.history.requestId;
     fireEvent.keyDown(window, { key: "Escape" });
@@ -441,11 +559,11 @@ describe("常驻侧栏与右侧视图", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     const afterViewChange = nextFrame;
-    fireEvent.click(screen.getByRole("tab", { name: "源码" }));
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
     act(() => frames.get(afterViewChange)?.(performance.now()));
     expect(cancel).toHaveBeenCalledWith(afterViewChange);
 
-    fireEvent.click(screen.getByRole("tab", { name: "分支" }));
+    fireEvent.click(screen.getByRole("tab", { name: "提交历史" }));
     fireEvent.click(screen.getByRole("button", { name: "返回 HEAD" }));
     const afterRepoChange = nextFrame;
     fireEvent.click(screen.getByRole("button", { name: "fixture" }));
@@ -457,10 +575,11 @@ describe("常驻侧栏与右侧视图", () => {
   });
   it("相同版本的文件差异直接复用，外部修改后重新读取", async () => {
     const view = render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
+    await resolve(0, "工作区结果");
     fireEvent.click(screen.getByRole("button", { name: "file.txt · 已暂存" }));
-    await resolve(0, "暂存结果");
+    await resolve(1, "暂存结果");
     fireEvent.click(screen.getByRole("button", { name: "file.txt · 未暂存" }));
-    await resolve(1, "工作区结果");
     fireEvent.click(screen.getByRole("button", { name: "file.txt · 已暂存" }));
     expect(pending).toHaveLength(2);
     expect(screen.getByText("+暂存结果")).toBeTruthy();

@@ -12,8 +12,9 @@ macOS may request access to Desktop or other protected folders. Respond to the s
 
 ## Explore changes and history
 
-- The persistent sidebar separates **Staged changes**, **Changes**, and **Merge changes** when present. A file can appear in both staged and unstaged scopes; each selection compares the appropriate bytes.
-- **Changes** and **History** share the right-hand workspace. Switching views preserves file selection, history filters, and scroll positions. Selecting a changed file opens Changes.
+- The left sidebar switches between **Working tree** and **Commit history**. The working tree separates **Staged changes**, **Changes**, and **Merge changes** when present. A file can appear in both staged and unstaged scopes; each selection compares the appropriate bytes.
+- Commit history and the selected commit's files share the left sidebar. Selecting a file from either view opens it in the shared diff reader on the right. Switching views preserves file selection, history filters, and scroll positions.
+- The worktree selector shows directory names, identifies the **Main worktree**, and marks the currently observed directory separately. Switching keeps the original project and does not create a recent-project entry for the worktree. Reopening the project restores the last available worktree; an explicit CLI directory takes priority. Reads and caches remain isolated by directory.
 - The commit graph shows actual parents, branches, tags, and HEAD. Filtering a branch changes the view without checking it out. **Go to HEAD** locates the current commit.
 - Select a commit to read its changed files. Ordinary and merge commits compare against their first parent; an initial commit shows added content.
 - Commit metadata comes from local Git. Expand it to see email and committer information. Click a text-diff line number to inspect who last changed that line on the selected side. Copy controls beside commit titles, IDs, and file paths make relevant context easy to share with an AI agent. No GitHub login is needed.

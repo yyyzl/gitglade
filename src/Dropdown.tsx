@@ -29,6 +29,7 @@ export function Dropdown({
   message,
   onRemoveOption,
   busy = false,
+  displayValue,
 }: {
   value: string;
   options: MenuOption[];
@@ -41,6 +42,7 @@ export function Dropdown({
   message?: ReactNode;
   onRemoveOption?: (value: string) => Promise<boolean> | boolean;
   busy?: boolean;
+  displayValue?: ReactNode;
 }) {
   const [open, setOpen] = useState(false),
     [mounted, setMounted] = useState(false),
@@ -182,7 +184,7 @@ export function Dropdown({
         }}
       >
         {icon && <Icon name={icon} size={17} />}
-        <span>{selected?.label || label}</span>
+        <span>{displayValue ?? selected?.label ?? label}</span>
         <Icon name="chevron" size={12} />
       </button>
       {mounted &&
@@ -197,6 +199,7 @@ export function Dropdown({
               ref={popup}
               id={id}
               className="dropdown-popup"
+              data-kind={className}
               tabIndex={-1}
               style={position}
               onKeyDown={(e) => {

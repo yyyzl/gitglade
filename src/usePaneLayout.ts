@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, RefObject } from "react";
 
 type Pane = "sidebar" | "detail";
-const defaults = { sidebar: 250, detail: 420 };
+const defaults = { sidebar: 360, detail: 420 };
 function saved(pane: Pane) {
   try {
     const value = Number(localStorage.getItem("oil-git." + pane + "-width"));
@@ -36,7 +36,7 @@ export function usePaneLayout(shell: RefObject<HTMLDivElement | null>) {
   const bounds = (pane: Pane) => {
     const width = viewportWidth.current;
     return pane === "sidebar"
-      ? [180, Math.min(460, Math.max(180, width - 400))]
+      ? [260, Math.min(520, Math.max(260, width - 400))]
       : [260, Math.max(260, width - effective.current.sidebar - 286)];
   };
   const apply = (pane: Pane, value: number) => {

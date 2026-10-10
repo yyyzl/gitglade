@@ -73,10 +73,16 @@ export function useCommitView(
   );
   const hash = selection?.kind === "commit" ? selection.hash : null;
   const owner = project.repoId + "\0" + hash;
-  const [choice, setChoice] = useState<{ owner: string; path: string } | null>(
-    null,
-  );
-  const path = choice?.owner === owner ? choice.path : null;
+  const [choices, setChoices] = useState(new Map<string, string>());
+  const path = choices.get(owner) ?? null;
+  const choose = (file: string | null) =>
+    setChoices((old) => {
+      const next = new Map(old);
+      next.delete(owner);
+      if (file) next.set(owner, file);
+      while (next.size > 12) next.delete(next.keys().next().value!);
+      return next;
+    });
   const [retry, setRetry] = useState(0);
   const key = [owner, revision, path ?? "", retry].join("\0");
   const [state, setState] = useState<{
@@ -111,8 +117,7 @@ export function useCommitView(
             loading: false,
             error: null,
           });
-          if (path && view.filePath !== path)
-            setChoice(view.filePath ? { owner, path: view.filePath } : null);
+          if (path && view.filePath !== path) choose(view.filePath);
         }
       })
       .catch((error: unknown) => {
@@ -133,7 +138,7 @@ export function useCommitView(
     loading: !!hash && active && (state.key !== key || state.loading),
     error: state.key === key ? state.error : null,
     requestKey: key,
-    choose: (file: string) => setChoice({ owner, path: file }),
+    choose,
     retry: () => setRetry((value) => value + 1),
   };
 }

@@ -216,6 +216,56 @@ describe("CodeDiff 变高换行", () => {
   });
 
   it.each(["unified", "split"] as const)(
+    "宽度变化后重测自然高度未变的长行，下一行不会重叠（%s）",
+    (layout) => {
+      const { container } = render(
+        <div className="diff-result">
+          <CodeDiff
+            patch={`@@ -1,2 +1,2 @@\n ${"长行文字 ".repeat(40)}\n tail`}
+            layout={layout}
+          />
+        </div>,
+      );
+      const observer = TestResizeObserver.instances[0];
+      const viewports = Array.from(
+        container.querySelectorAll<HTMLElement>(".code-diff-viewport"),
+      );
+      const rows = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-virtual-index]"),
+      );
+      const sizeOf = (target: Element) => ({
+        target,
+        width: 490,
+        height: target.getAttribute("data-virtual-index") === "1" ? 96 : 24,
+      });
+      act(() =>
+        observer.emit([
+          ...viewports.map((target) => ({ target, width: 500, height: 300 })),
+          ...rows.map(sizeOf),
+        ]),
+      );
+      // 浏览器不会再次通知高度未变的行；重新 observe 才会报告初始尺寸。
+      const pending: ReturnType<typeof sizeOf>[] = [];
+      observer.observe.mockImplementation((target: Element) => {
+        if (target.hasAttribute("data-virtual-index"))
+          pending.push(sizeOf(target));
+      });
+      act(() =>
+        observer.emit(
+          viewports.map((target) => ({ target, width: 490, height: 300 })),
+        ),
+      );
+      act(() => observer.emit(pending));
+      for (const viewport of viewports) {
+        const next = viewport.querySelector<HTMLElement>(
+          '[data-virtual-index="2"]',
+        )!;
+        expect(next.parentElement!.style.top).toBe("120px");
+      }
+    },
+  );
+
+  it.each(["unified", "split"] as const)(
     "替换后重测复用的长行并保留下一行位置（%s）",
     (layout) => {
       const patchFor = (tail: string) =>

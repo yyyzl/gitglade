@@ -21,7 +21,19 @@ export function HistoryGraph({
   resetKey: string;
   active?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const dateFormat = useMemo(
+    () =>
+      new Intl.DateTimeFormat(language === "en" ? "en-US" : "zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }),
+    [language],
+  );
   const graph = useMemo(
     () => layoutGraph(commits, snapshot.head),
     [commits, snapshot.head],
@@ -39,6 +51,8 @@ export function HistoryGraph({
   const canvas = useRef<HTMLDivElement>(null);
   const scrollFrame = useRef(0);
   const rememberedTop = useRef(0);
+  const positions = useRef(new Map<string, { top: number; index: number }>());
+  const scrollOwner = useRef(resetKey);
   useGraphMotion(canvas, graph, active);
   const [range, setRange] = useState({ top: 0, height: 700 });
   const [keyboardIndex, setKeyboardIndex] = useState(0);
@@ -53,11 +67,20 @@ export function HistoryGraph({
     return () => resize.disconnect();
   }, []);
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), []);
-  useEffect(() => {
-    rememberedTop.current = 0;
-    viewport.current?.scrollTo({ top: 0 });
-    setRange((r) => ({ ...r, top: 0 }));
-    setKeyboardIndex(0);
+  useLayoutEffect(() => {
+    positions.current.set(scrollOwner.current, {
+      top: rememberedTop.current,
+      index: keyboardIndex,
+    });
+    while (positions.current.size > 12)
+      positions.current.delete(positions.current.keys().next().value!);
+    scrollOwner.current = resetKey;
+    const saved = positions.current.get(resetKey);
+    const top = saved?.top ?? 0;
+    rememberedTop.current = top;
+    viewport.current?.scrollTo({ top });
+    setRange((r) => ({ ...r, top }));
+    setKeyboardIndex(saved?.index ?? 0);
   }, [resetKey]);
   useLayoutEffect(() => {
     if (active && viewport.current)
@@ -107,6 +130,7 @@ export function HistoryGraph({
         );
       }}
       onKeyDown={(e) => {
+        if (!active) return;
         if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
           e.preventDefault();
           const index =
@@ -192,6 +216,13 @@ export function HistoryGraph({
           const refs = refsByHash.get(c.hash) ?? [];
           const color =
             COLORS[graph.positions.get(c.hash)!.lane % COLORS.length];
+          const date = new Date(c.date);
+          const validDate = Number.isFinite(date.getTime());
+          const fullDate = t("时间：{value}", {
+            value: validDate
+              ? date.toLocaleString(language === "en" ? "en-US" : "zh-CN")
+              : c.date,
+          });
           return (
             <div
               key={c.hash}
@@ -238,46 +269,56 @@ export function HistoryGraph({
                   {c.author}
                 </span>
               </div>
-              {(refs.length > 0 || c.hash === snapshot.head) && (
-                <span className="commit-refs">
-                  {refs.map((r) => (
-                    <span
-                      key={r.fullName}
-                      className={"ref " + r.kind}
-                      title={r.name}
-                      aria-label={r.name}
-                      style={
-                        r.kind === "branch"
-                          ? {
-                              color,
-                              backgroundColor:
-                                "var(--lane-bg-" +
-                                (graph.positions.get(c.hash)!.lane %
-                                  COLORS.length) +
-                                ")",
-                            }
-                          : undefined
-                      }
-                    >
-                      {r.name.length > 36 ? (
-                        <>
-                          <span className="ref-prefix">
-                            {r.name.slice(0, -12)}
-                          </span>
-                          <span className="ref-suffix">
-                            {r.name.slice(-12)}
-                          </span>
-                        </>
-                      ) : (
-                        r.name
-                      )}
-                    </span>
-                  ))}
-                  {c.hash === snapshot.head && (
-                    <span className="head-mark">← HEAD</span>
-                  )}
-                </span>
-              )}
+              <div className="commit-context-line">
+                {c.hash === snapshot.head && (
+                  <span className="head-mark">← HEAD</span>
+                )}
+                {refs.length > 0 && (
+                  <span className="commit-refs">
+                    {refs.map((r) => (
+                      <span
+                        key={r.fullName}
+                        className={"ref " + r.kind}
+                        title={r.name}
+                        aria-label={r.name}
+                        style={
+                          r.kind === "branch"
+                            ? {
+                                color,
+                                backgroundColor:
+                                  "var(--lane-bg-" +
+                                  (graph.positions.get(c.hash)!.lane %
+                                    COLORS.length) +
+                                  ")",
+                              }
+                            : undefined
+                        }
+                      >
+                        {r.name.length > 36 ? (
+                          <>
+                            <span className="ref-prefix">
+                              {r.name.slice(0, -12)}
+                            </span>
+                            <span className="ref-suffix">
+                              {r.name.slice(-12)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="ref-prefix">{r.name}</span>
+                        )}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <time
+                  className="commit-row-date"
+                  dateTime={c.date}
+                  title={fullDate}
+                  aria-label={fullDate}
+                >
+                  {validDate ? dateFormat.format(date) : c.date}
+                </time>
+              </div>
             </div>
           );
         })}
