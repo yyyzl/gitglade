@@ -3,9 +3,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/oil-oil/oil-git/actions/workflows/build.yml"><img src="https://github.com/oil-oil/oil-git/actions/workflows/build.yml/badge.svg" alt="桌面端构建与测试状态" /></a>
+  <a href="https://github.com/yyyzl/oil-git/actions/workflows/build.yml"><img src="https://github.com/yyyzl/oil-git/actions/workflows/build.yml/badge.svg" alt="桌面端构建与测试状态" /></a>
   · <a href="LICENSE">MIT</a>
-  · <a href="https://github.com/oil-oil/oil-git/releases">下载</a>
+  · <a href="https://github.com/yyyzl/oil-git/releases/latest">下载</a>
   · <a href="docs/zh-CN/usage.md">使用说明</a>
   · <a href="docs/zh-CN/contributing.md">贡献指南</a>
   · <a href="skills/oil-git/SKILL.zh-CN.md">Agent Skill</a>
@@ -13,6 +13,8 @@
 </p>
 
 **oil-git 是一个本地 Git 仓库可视化桌面工具。** 打开项目即可查看当前分支、工作区更改、提交历史和文件差异。你继续在编辑器、终端或 Agent 中使用 Git，oil-git 会跟随真实仓库的变化更新。
+
+本仓库是 [oil-oil/oil-git](https://github.com/oil-oil/oil-git) 的 Fork，包含本地改动和 CI 兼容性修复。上方构建徽章和下载入口均指向本 Fork。
 
 ## 可以查看什么
 
@@ -38,7 +40,22 @@
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/oil-oil/oil-git/releases) 下载 macOS DMG 或 Windows x64 安装器。发布包的功能范围以对应标签和发布说明为准；默认分支的最新改动可使用对应提交的 [CI 构建产物](https://github.com/oil-oil/oil-git/actions/workflows/build.yml)，或[从源码构建](docs/zh-CN/development.md)。电脑需要已安装 Git；运行打包后的应用不需要 Python、Node.js 或 Rust。
+从[本 Fork 的 GitHub Releases](https://github.com/yyyzl/oil-git/releases/latest) 下载已验证的安装包：
+
+- **Windows x64：** `oil-git_*_x64-setup.exe`。
+- **macOS（Apple Silicon 和 Intel）：** `oil-git_*_universal.dmg`。
+
+Release 附件与临时 CI 产物独立，不受 CI 的 14 天保留期限限制；除非删除 Release 或附件，否则可持续下载。对应源码版本见发布说明。
+
+尚未发布的提交可通过 [GitHub Actions 构建产物](https://github.com/yyyzl/oil-git/actions/workflows/build.yml) 下载：
+
+1. 打开 **Desktop CI**，选择 `main` 分支上成功的构建，确认提交对应你需要的版本。
+2. 在页面的 **Artifacts** 区域，Windows x64 下载 `windows-x64-test`；macOS（Apple Silicon 和 Intel）下载 `mac-universal-test`。下载构建产物需要登录 GitHub。
+3. 解压下载的 ZIP，运行 Windows 的 `*setup.exe` 安装器，或打开 macOS 的 `.dmg`。
+
+构建产物保留 **14 天**。若已过期，可通过 **Run workflow** 手动触发新构建，或[从源码构建](docs/zh-CN/development.md)。推送代码和提交 Pull Request 会自动触发检查；全部检查通过后，工作流构建两个平台的安装包，并在 Windows 和两种 macOS 架构上验证安装后的 CLI。失败的构建可能不会生成安装包。
+
+电脑需要已安装 Git；运行打包后的应用不需要 Python、Node.js 或 Rust。
 
 从工具栏打开项目，或按 macOS **⌘ O**、Windows **Ctrl O**。选择仓库内的子目录也会打开所属仓库。按 **⌘ R** 或 **Ctrl R** 刷新。
 
@@ -76,6 +93,10 @@ npm run desktop
 ```
 
 开发需要 Node.js 22、Rust 和当前平台的 Tauri 开发依赖。参阅[开发文档](docs/zh-CN/development.md)和[使用说明](docs/zh-CN/usage.md)，也可阅读英文版[开发文档](docs/development.md)与[使用说明](docs/usage.md)。贡献前请阅读[贡献指南](docs/zh-CN/contributing.md)。
+
+## 发布版本
+
+向本 Fork 推送新的 `v主版本.次版本.修订号` 标签（如 `v0.1.1`）。所有平台检查、打包及安装后 CLI 验证通过后，**Desktop CI** 自动创建 GitHub Release，上传 Windows 安装器、macOS 通用 DMG 和 `SHA256SUMS.txt`。已有 Release 不会被覆盖；普通分支推送不会发布版本。发布新版本前应先更新应用版本号。
 
 ## 许可证
 

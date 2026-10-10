@@ -131,3 +131,46 @@ jobs:
           path: reports/*.json
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Publish release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: installed
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-test"
+          merge-multiple: true
+          path: installers
+      - name: Publish verified installers
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'Release tags must use vMAJOR.MINOR.PATCH\n' >&2
+            exit 1
+          fi
+          shopt -s globstar nullglob
+          mac_assets=(installers/**/*.dmg)
+          windows_assets=(installers/**/*setup.exe)
+          if (( ${#mac_assets[@]} != 1 || ${#windows_assets[@]} != 1 )); then
+            printf 'Expected one macOS DMG and one Windows installer\n' >&2
+            exit 1
+          fi
+          mkdir -p release-assets
+          cp "${mac_assets[0]}" "${windows_assets[0]}" release-assets/
+          cd release-assets
+          sha256sum ./*.dmg ./*setup.exe > SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" \
+            --repo "$GH_REPO" --verify-tag \
+            --title "oil-git $RELEASE_TAG" --generate-notes \
+            --draft=false --prerelease=false --latest \
+            ./*.dmg ./*setup.exe SHA256SUMS.txt

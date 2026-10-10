@@ -3,9 +3,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/oil-oil/oil-git/actions/workflows/build.yml"><img src="https://github.com/oil-oil/oil-git/actions/workflows/build.yml/badge.svg" alt="Desktop build and test status" /></a>
+  <a href="https://github.com/yyyzl/oil-git/actions/workflows/build.yml"><img src="https://github.com/yyyzl/oil-git/actions/workflows/build.yml/badge.svg" alt="Desktop build and test status" /></a>
   · <a href="LICENSE">MIT</a>
-  · <a href="https://github.com/oil-oil/oil-git/releases">Downloads</a>
+  · <a href="https://github.com/yyyzl/oil-git/releases/latest">Downloads</a>
   · <a href="docs/usage.md">Usage</a>
   · <a href="CONTRIBUTING.md">Contributing</a>
   · <a href="skills/oil-git/SKILL.md">Agent Skill</a>
@@ -13,6 +13,8 @@
 </p>
 
 **oil-git is a desktop viewer for local Git repositories.** Open a project to inspect its current branch, working tree changes, commit history, and file diffs. Keep using Git in your editor, terminal, or agent; oil-git follows changes made to the real repository.
+
+This repository is a fork of [oil-oil/oil-git](https://github.com/oil-oil/oil-git). It includes local changes and CI compatibility fixes; the build badge and downloads above refer to this fork.
 
 ## What you can inspect
 
@@ -38,7 +40,22 @@ The interface supports English and Simplified Chinese. It follows the system lan
 
 ## Install
 
-Download the macOS DMG or Windows x64 installer from [GitHub Releases](https://github.com/oil-oil/oil-git/releases). Feature scope follows the release tag and notes. For changes on the default branch, use the matching [CI build artifact](https://github.com/oil-oil/oil-git/actions/workflows/build.yml) or [build from source](docs/development.md). Git must be installed on the computer. The packaged app does not require Python, Node.js, or Rust at runtime.
+Download verified installers from [this fork's GitHub Releases](https://github.com/yyyzl/oil-git/releases/latest):
+
+- **Windows x64:** `oil-git_*_x64-setup.exe`.
+- **macOS (Apple Silicon and Intel):** `oil-git_*_universal.dmg`.
+
+Release assets are separate from the temporary CI artifacts and remain available unless the release or assets are deleted. Release notes identify the source version.
+
+For unreleased commits, use [GitHub Actions build artifacts](https://github.com/yyyzl/oil-git/actions/workflows/build.yml):
+
+1. Open **Desktop CI** and select a successful run for `main`. Check the commit matches the version you want.
+2. In **Artifacts**, download `windows-x64-test` for Windows x64 or `mac-universal-test` for macOS (Apple Silicon and Intel). You must be signed in to GitHub to download artifacts.
+3. Extract the downloaded ZIP, then run the Windows `*setup.exe` installer or open the macOS `.dmg`.
+
+Artifacts are retained for **14 days**. If an artifact has expired, trigger a new run using **Run workflow**, or [build from source](docs/development.md). Pushes and pull requests automatically trigger checks; when all checks pass, the workflow builds both installers and verifies the installed CLI on Windows and both macOS architectures. A failed run may not produce installers.
+
+Git must be installed on the computer. The packaged app does not require Python, Node.js, or Rust at runtime.
 
 Open a project from the toolbar or press **⌘ O** on macOS or **Ctrl O** on Windows. Selecting a directory inside a repository opens its owning repository. Use **⌘ R** or **Ctrl R** to refresh.
 
@@ -76,6 +93,10 @@ npm run desktop
 ```
 
 Development requires Node.js 22, Rust, and the Tauri dependencies for your platform. Read the [development guide](docs/development.md) and [usage guide](docs/usage.md), or their [Simplified Chinese versions](docs/zh-CN/development.md) and [中文使用说明](docs/zh-CN/usage.md). See [Contributing](CONTRIBUTING.md) before making changes.
+
+## Publishing a release
+
+Push a new version tag in `vMAJOR.MINOR.PATCH` format (for example, `v0.1.1`) to this fork. After all platform checks, packaging, and installed-CLI verification succeed, **Desktop CI** creates a GitHub Release and uploads the Windows installer, macOS universal DMG, and `SHA256SUMS.txt`. Existing releases are not overwritten. Ordinary branch pushes do not publish releases. Update the application version before tagging a new version.
 
 ## License
 
