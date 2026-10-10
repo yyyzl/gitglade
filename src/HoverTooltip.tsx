@@ -120,6 +120,8 @@ export function HoverTooltip() {
     }
     const anchor = tip.target.getBoundingClientRect();
     const size = box.getBoundingClientRect();
+    box.style.pointerEvents =
+      box.scrollHeight > box.clientHeight ? "auto" : "none";
     box.style.left =
       Math.max(12, Math.min(anchor.left, innerWidth - size.width - 12)) + "px";
     box.style.top =

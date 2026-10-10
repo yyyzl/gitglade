@@ -46,11 +46,14 @@ it("浮层脱离滚动裁切，显示原文，并限制在窗口内", () => {
   expect(tip.querySelector("script")).toBeNull();
   expect(tip.style.left).toBe("688px");
   expect(tip.style.top).toBe("592px");
+  expect(tip.style.pointerEvents).toBe("none");
   expect(trigger.getAttribute("aria-describedby")).toBe(tip.id);
   expect(trigger.hasAttribute("title")).toBe(false);
 });
 
 it("浮层内部可操作，列表滚动后关闭并恢复原生说明", () => {
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(100);
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(200);
   render(
     <div data-testid="list">
       <button title="完整文件路径">文件…</button>
@@ -61,6 +64,7 @@ it("浮层内部可操作，列表滚动后关闭并恢复原生说明", () => {
   fireEvent.pointerOver(trigger);
   settle();
   const tip = screen.getByRole("tooltip");
+  expect(tip.style.pointerEvents).toBe("auto");
   fireEvent.pointerOut(trigger, { relatedTarget: tip });
   fireEvent.pointerOver(tip);
   fireEvent.pointerDown(tip);
