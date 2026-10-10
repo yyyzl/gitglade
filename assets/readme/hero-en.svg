@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" role="img" aria-labelledby="title desc">
   <title id="title">oil-git · See what AI changed</title>
-  <desc id="desc">A read-only Git desktop viewer. The diagram uses commits and a tasks.ts diff from a real test repository. See the README for native screenshots and usage.</desc>
+  <desc id="desc">A local Git desktop viewer. The diagram uses commits and a tasks.ts diff from a real test repository. See the README for native screenshots and usage.</desc>
   <rect width="1200" height="460" rx="24" fill="#21252b"/>
   <g id="identity" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <g transform="translate(64 44)" fill="none" stroke="#98c379" stroke-width="3" stroke-linecap="round">

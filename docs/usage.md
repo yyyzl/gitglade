@@ -12,13 +12,19 @@ macOS may request access to Desktop or other protected folders. Respond to the s
 
 ## Explore changes and history
 
-- The left sidebar switches between **Working tree** and **Commit history**. The working tree separates **Staged changes**, **Changes**, and **Merge changes** when present. A file can appear in both staged and unstaged scopes; each selection compares the appropriate bytes.
+- The left sidebar switches between **Working tree**, **Commit history**, and **Branch comparison**. The working tree separates **Staged changes**, **Changes**, and **Merge changes** when present. A file can appear in both staged and unstaged scopes; each selection compares the appropriate bytes.
 - Commit history and the selected commit's files share the left sidebar. Selecting a file from either view opens it in the shared diff reader on the right. Switching views preserves file selection, history filters, and scroll positions.
 - The worktree selector shows directory names, identifies the **Main worktree**, and marks the currently observed directory separately. Switching keeps the original project and does not create a recent-project entry for the worktree. Reopening the project restores the last available worktree; an explicit CLI directory takes priority. Reads and caches remain isolated by directory.
 - The commit graph shows actual parents, branches, tags, and HEAD. Filtering a branch changes the view without checking it out. **Go to HEAD** locates the current commit.
 - Select a commit to read its changed files. Ordinary and merge commits compare against their first parent; an initial commit shows added content.
 - Commit metadata comes from local Git. Expand it to see email and committer information. Click a text-diff line number to inspect who last changed that line on the selected side. Copy controls beside commit titles, IDs, and file paths make relevant context easy to share with an AI agent. No GitHub login is needed.
 - Worktree selection changes the observed directory. Stashes are read from the repository's actual stash list.
+
+## Update and compare branches
+
+**Update branch** beside the current branch opens a check-and-confirm panel. Select an existing remote-tracking branch if no upstream is configured; this choice applies only to this update. **Check remote updates** fetches that branch without moving local HEAD or changing files. Review incoming commits or choose **View update diff** to open branch comparison, then confirm **Update local branch** for a fast-forward. Recheck when local or remote state changes. Dirty tracked files, divergence, an active Git operation, detached HEAD, and updates requiring content filters stop the operation with a reason. Unrelated untracked files are preserved; conflicting and ignored files are protected from overwrite.
+
+In **Branch comparison**, choose a base on the left and a target on the right, optionally swap them, then apply the comparison. The file list shows the target tree relative to the base tree, not changes since their merge base. Remote refs use locally stored records; comparison does not fetch or check out a branch. Selecting a file reuses the right-hand text, media, binary and line-attribution reader.
 
 ## Compare files
 
@@ -59,9 +65,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\bin\oil-git.
 
 The launcher and Skill are packaged under `Contents/Resources` on macOS and the installation directory on Windows. You can give the complete `skills/oil-git` directory to your agent host for installation according to its rules. Installing oil-git does not change another application's Skill settings.
 
-## Read-only scope
+## Repository access
 
-oil-git does not commit, checkout, fetch, merge, or undo changes. Ahead/behind counts describe locally available remote-tracking records. Bare and partial-clone repositories are unsupported, including partial clones whose objects have already been downloaded.
+Viewing, branch comparison, and the CLI are read-only. The explicit update flow above is the only operation that fetches or fast-forwards a branch. Ahead/behind counts describe locally available remote-tracking records. Bare and partial-clone repositories are unsupported, including partial clones whose objects have already been downloaded.
 
 Standard Git LFS uses a bundled read-only filter: it does not run the repository's LFS program, download content, or write to the LFS object store. Pointers and expanded content are compared in their actual staged or unstaged scope. Custom LFS conversions and extensions are unsupported.
 

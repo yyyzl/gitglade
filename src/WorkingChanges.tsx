@@ -292,6 +292,7 @@ export function SourceEditor({
   origin,
   active = true,
   commit,
+  comparison,
 }: {
   files: FileState[];
   file: WorkingFile | null;
@@ -303,6 +304,7 @@ export function SourceEditor({
   origin?: DiffOrigin;
   active?: boolean;
   commit?: CommitDetail;
+  comparison?: [string, string];
 }) {
   const { t } = useI18n();
   const [preferSplit, setPreferSplit] = useState(true),
@@ -318,18 +320,24 @@ export function SourceEditor({
     return () => observer.disconnect();
   }, []);
   const selected = files.find((f) => f.path === file?.path);
-  const labels: [string, string] = commit
-    ? [commit.parents.length ? t("第一个父提交") : t("尚不存在"), t("所选提交")]
-    : file?.mode === "staged"
-      ? [t("上次提交"), t("暂存区")]
-      : selected?.untracked
-        ? [t("尚不存在"), t("工作区")]
-        : [t("暂存区"), t("工作区")];
+  const labels: [string, string] =
+    comparison ??
+    (commit
+      ? [
+          commit.parents.length ? t("第一个父提交") : t("尚不存在"),
+          t("所选提交"),
+        ]
+      : file?.mode === "staged"
+        ? [t("上次提交"), t("暂存区")]
+        : selected?.untracked
+          ? [t("尚不存在"), t("工作区")]
+          : [t("暂存区"), t("工作区")]);
   const captions = {
     unstaged: selected?.untracked ? t("未跟踪的新文件") : t("暂存区 → 工作区"),
     staged: t("上次提交 → 暂存区"),
     conflict: t("尚未解决的冲突"),
     commit: t("提交差异"),
+    branches: t("分支对比"),
   };
   return (
     <div className="changes-editor" ref={editor}>
@@ -341,11 +349,13 @@ export function SourceEditor({
                 <strong title={file.path}>{file.path.split("/").pop()}</strong>
                 <CopyButton text={file.path} label={t("复制文件路径")} />
               </div>
-              <span className="diff-path" title={file.path}>
-                {file.path.includes("/")
-                  ? file.path.slice(0, file.path.lastIndexOf("/"))
-                  : captions[file.mode]}
-              </span>
+              {(!comparison || file.path.includes("/")) && (
+                <span className="diff-path" title={file.path}>
+                  {file.path.includes("/")
+                    ? file.path.slice(0, file.path.lastIndexOf("/"))
+                    : captions[file.mode]}
+                </span>
+              )}
             </div>
             {commit && (
               <div className="editor-commit" title={commit.subject}>
@@ -383,7 +393,13 @@ export function SourceEditor({
           )}
           <div
             className="working-diff diff-scroll"
-            key={commit ? commit.hash : file.path + file.mode}
+            key={
+              comparison
+                ? "branches"
+                : commit
+                  ? commit.hash
+                  : file.path + file.mode
+            }
           >
             <ReadStatus
               busy={loading && !error}

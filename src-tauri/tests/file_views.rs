@@ -54,6 +54,9 @@ impl Repo {
                     commit: commit.map(str::to_owned),
                     history_revision: Some(snapshot.history_revision),
                     changes_revision: Some(snapshot.changes_revision),
+                    before_commit: None,
+                    after_commit: None,
+                    before_path: None,
                 },
             )
             .unwrap()
@@ -289,6 +292,9 @@ fn line_authors_distinguish_committed_staged_and_uncommitted_lines() {
         commit: None,
         history_revision: None,
         changes_revision: Some(old),
+        before_commit: None,
+        after_commit: None,
+        before_path: None,
     };
     assert_eq!(
         repo.git.line_origin(&repo.path, &request).unwrap_err().kind,

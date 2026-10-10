@@ -569,6 +569,27 @@ kbd {
   pointer-events: none;
   z-index: 20;
 }
+.project-opening {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 10px 24px;
+  color: var(--text);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.project-opening strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.project-opening .branch-spinner {
+  flex-shrink: 0;
+}
 .sync-indicator::after {
   content: "";
   position: absolute;
@@ -1657,7 +1678,7 @@ button {
   width: 100%;
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   height: 100%;
   padding: 0;
   gap: 0;
@@ -1669,7 +1690,7 @@ button {
   bottom: 0;
   left: 0;
   height: 2px;
-  width: 50%;
+  width: 33.333333%;
   background: var(--accent);
   transform: translateX(100%);
   transition: transform var(--motion) var(--ease);
@@ -1677,6 +1698,9 @@ button {
 }
 .view-tabs[data-view="source"] > i {
   transform: none;
+}
+.view-tabs[data-view="branches"] > i {
+  transform: translateX(200%);
 }
 .view-tabs > button {
   padding: 0 18px;

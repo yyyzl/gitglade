@@ -10,6 +10,9 @@ pub struct LineOriginRequest {
     pub line: usize,
     pub history_revision: Option<String>,
     pub changes_revision: Option<String>,
+    pub before_commit: Option<String>,
+    pub after_commit: Option<String>,
+    pub before_path: Option<String>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,14 +34,27 @@ impl Git {
         }
         self.reject_partial_clone(repo)?;
         let before = request.side == "before";
-        let history = if request.mode == "commit" {
+        let history = if matches!(request.mode.as_str(), "commit" | "branches") {
             self.check_expected_history(repo, request.history_revision.as_deref())?
         } else {
             None
         };
         let mut contents = None;
         let mut path = request.path.clone();
-        let revision = if request.mode == "commit" {
+        let revision = if request.mode == "branches" {
+            let hash = if before {
+                request.before_commit.as_deref()
+            } else {
+                request.after_commit.as_deref()
+            }
+            .ok_or_else(|| Error::new("invalid", "分支比较版本无效。"))?;
+            Self::validate_commit_id(hash)?;
+            if before {
+                path = request.before_path.clone().unwrap_or(path);
+            }
+            validate_relative(&path)?;
+            hash.to_owned()
+        } else if request.mode == "commit" {
             let detail = self.commit_inner(repo, request.commit.as_deref().unwrap_or_default())?;
             let file = detail
                 .files
@@ -132,7 +148,7 @@ impl Git {
         }
         let origin = parse_origin(&output.bytes, request)?;
         self.verify_expected_history_still_current(repo, history.as_deref())?;
-        if request.mode != "commit" {
+        if !matches!(request.mode.as_str(), "commit" | "branches") {
             self.check_line_changes(repo, request.changes_revision.as_deref())?;
         }
         Ok(origin)

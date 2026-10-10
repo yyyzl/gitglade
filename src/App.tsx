@@ -15,12 +15,28 @@ import { SyncIndicator } from "./SyncIndicator";
 import { useI18n } from "./i18n";
 import { ErrorMessage } from "./ErrorMessage";
 import { HoverTooltip } from "./HoverTooltip";
+import { BranchComparison } from "./BranchComparison";
+import { BranchUpdate } from "./BranchUpdate";
+import { useBranchComparison } from "./useBranchComparison";
+import "./branches.css";
 export default function App() {
   const repo = useRepository();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useI18n();
-  const [view, setView] = useState<"source" | "history">("history");
+  const [view, setView] = useState<"source" | "history" | "branches">(
+    "history",
+  );
   const working = useWorkingCopy(repo.project, view === "source");
+  const branches = useBranchComparison(repo.project, view === "branches");
+  const [writes, setWrites] = useState(0);
+  const writeBusy = writes > 0;
+  const setWriteBusy = useCallback(
+    (busy: boolean) =>
+      setWrites((count) => Math.max(0, count + (busy ? 1 : -1))),
+    [],
+  );
+  const [branchFilesTarget, setBranchFilesTarget] =
+    useState<HTMLDivElement | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const selectionOwner = useRef<string | null>(null);
   const selections = useRef(new Map<string, Selection>());
@@ -62,7 +78,7 @@ export default function App() {
     cancelAnimationFrame(locateFrame.current);
     locateFrame.current = 0;
   };
-  const switchView = (next: "source" | "history") => {
+  const switchView = (next: "source" | "history" | "branches") => {
     if (next !== "history") clearLocate();
     setView(next);
   };
@@ -124,7 +140,11 @@ export default function App() {
   }, [detailOpen, effectiveSelection]);
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "o") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "o" &&
+        !writeBusy
+      ) {
         e.preventDefault();
         clearLocate();
         void repo.choose();
@@ -144,7 +164,7 @@ export default function App() {
     };
     window.addEventListener("keydown", keys);
     return () => window.removeEventListener("keydown", keys);
-  }, [repo.choose, repo.refresh]);
+  }, [repo.choose, repo.refresh, writeBusy]);
   useEffect(
     () => () => {
       locateFrameToken.current++;
@@ -288,7 +308,7 @@ export default function App() {
           busy={repo.forgettingRecent}
           label={repo.identity?.name || s?.name || t("打开项目")}
           icon="folder"
-          disabled={!repo.gitStatus.version}
+          disabled={!repo.gitStatus.version || writeBusy}
         />
         {s && (
           <>
@@ -310,6 +330,20 @@ export default function App() {
                 {s.branch || t("分离 HEAD")}
               </span>
             </span>
+            {repo.project && (
+              <BranchUpdate
+                key={repo.project.repoId}
+                project={repo.project}
+                refresh={() => repo.refresh(true)}
+                onBusy={setWriteBusy}
+                disabled={repo.opening}
+                onCompare={(base, target) => {
+                  branches.inspect(base, target);
+                  switchView("branches");
+                }}
+                onWorkspace={() => switchView("source")}
+              />
+            )}
             <span className="toolbar-spacer" data-tauri-drag-region />
             {s.worktrees.length > 1 && (
               <Dropdown
@@ -345,6 +379,7 @@ export default function App() {
                     )}
                   </>
                 }
+                disabled={writeBusy}
                 icon="stack"
               />
             )}
@@ -386,6 +421,18 @@ export default function App() {
         />
         <SyncIndicator busy={syncing} requestKey={repo.project?.repoId ?? ""} />
       </header>
+      {repo.opening && (
+        <div className="project-opening" role="status">
+          <span className="branch-spinner" aria-hidden="true" />
+          <span>{t("正在切换项目…")}</span>
+          <strong title={repo.openingPath ?? ""}>
+            {repo.openingPath
+              ?.replace(/[\\/]+$/, "")
+              .split(/[\\/]/)
+              .pop()}
+          </strong>
+        </div>
+      )}
       {readError && (
         <div className="error-banner" role="status">
           <div>
@@ -504,6 +551,10 @@ export default function App() {
                   id="history-tab"
                   onClick={() => switchView("history")}
                   onKeyDown={(e) => {
+                    if (e.key === "ArrowRight") {
+                      switchView("branches");
+                      document.getElementById("branches-tab")?.focus();
+                    }
                     if (e.key === "ArrowLeft") {
                       switchView("source");
                       document.getElementById("source-tab")?.focus();
@@ -512,6 +563,22 @@ export default function App() {
                 >
                   <Icon name="branch" size={15} />
                   {t("提交历史")}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={view === "branches"}
+                  aria-controls="branches-view branches-diff"
+                  id="branches-tab"
+                  onClick={() => switchView("branches")}
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowLeft") {
+                      switchView("history");
+                      document.getElementById("history-tab")?.focus();
+                    }
+                  }}
+                >
+                  <Icon name="branch" size={15} />
+                  {t("分支对比")}
                 </button>
               </div>
             </header>
@@ -668,6 +735,17 @@ export default function App() {
                 <div className="history-files" ref={setCommitFilesTarget} />
               </div>
             </div>
+            <div
+              className={
+                "view-branches " + (view === "branches" ? "active" : "")
+              }
+              id="branches-view"
+              role="tabpanel"
+              aria-labelledby="branches-tab"
+              hidden={view !== "branches"}
+              inert={view !== "branches"}
+              ref={setBranchFilesTarget}
+            />
           </aside>
           <div
             className="resize-handle sidebar-resize-handle"
@@ -741,6 +819,23 @@ export default function App() {
                   <p>{t("选择提交，查看文件差异")}</p>
                 </div>
               )}
+            </div>
+            <div
+              className={
+                "view-branches " + (view === "branches" ? "active" : "")
+              }
+              id="branches-diff"
+              role="region"
+              aria-label={t("分支对比")}
+              hidden={view !== "branches"}
+              inert={view !== "branches"}
+            >
+              <BranchComparison
+                project={repo.project}
+                view={branches}
+                active={view === "branches"}
+                sidebar={branchFilesTarget}
+              />
             </div>
           </section>
         </main>

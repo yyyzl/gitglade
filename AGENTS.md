@@ -2,7 +2,7 @@
 
 ## Product and repository access
 
-- oil-git is an independent, read-only desktop tool. Read real Git data from the repository selected by the user. Do not add Git write operations, a browser product, or simulated successful data.
+- oil-git is an independent desktop tool reading real Git data from the selected repository. Viewing and branch comparison are read-only. The explicit branch-update flow may fetch the selected remote ref, then fast-forward the current worktree branch after confirmation. Revalidate branch, HEAD, target and worktree safety before updating; stop on divergence, changed tracked files or an active Git operation. Other write operations, a browser product, and simulated successful data are outside scope.
 - Viewing must not change observed files, the index, refs, configuration, or the LFS object store. Do not download content or invoke external repository converters. Use the bundled read-only filter for standard LFS. Tests use independent temporary repositories.
 - Discover changes through Git rather than scanning all working-directory file contents. Bound diff memory and label truncated output.
 - Child-process timeouts observe only the Child started by that request. Do not register a global SIGCHLD handler.
@@ -21,7 +21,7 @@
 - Support Light, Dark, and Green themes, defaulting to neutral Dark. Maintain colors in `scripts/theme-palettes.json`; do not weaken text through reduced opacity. Use existing Material Icon Theme assets. Prioritize commit titles, branches, and file changes; reveal hashes, author details, and complete paths on demand.
 - Support English and Simplified Chinese for user-facing text and accessible names. Preserve original Git messages, paths, ref names, and identities. Keep JSON fields, error kinds, and message keys independent of locale.
 - Group the workspace into Staged changes, Changes, and Merge changes. Select the same file independently in each scope. Preserve actual line numbers in both comparison sides. Render only visible code and history.
-- Switch Working tree and Commit history in the left sidebar. History and its changed files share that sidebar; the right pane is the shared diff reader. Preserve file selection, filters, and scroll positions when switching. Hidden views do not capture keyboard input or run continuous animations.
+- Switch Working tree, Commit history, and Branch comparison in the left sidebar. History and its changed files share that sidebar; the right pane is the shared diff reader. Preserve file selection, filters, and scroll positions when switching. Hidden views do not capture keyboard input or run continuous animations.
 - Switching worktrees retains the original project identity and recent-project record. Identify the main worktree by Git's directory listing, and isolate reads, request ownership, and caches by the actual worktree directory. Reopening a project may restore its last available worktree; explicit CLI open requests take priority.
 - Do not draw focus outlines; retain selected backgrounds for keyboard navigation. Commit details slide as a whole according to the vertical order of the displayed and newly selected nodes. Pending requests, same-commit file changes, and background refreshes do not trigger this motion. Stop animations in hidden views and under reduced-motion settings.
 - Each commit-animation frame processes only visible elements and their edge endpoints.

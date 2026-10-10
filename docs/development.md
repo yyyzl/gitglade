@@ -67,4 +67,4 @@ It copies the application into an independent temporary directory and removes th
 
 ## Source layout
 
-`src/` contains the React interface, state, and translations; `src-tauri/src/` provides read-only Git interfaces, file previews, and the LFS filter. `scripts/` contains the palette and file-icon generation entry points. See [AGENTS.md](../AGENTS.md) for request ownership, rendering, and repository-access constraints.
+`src/` contains the React interface, state, and translations; `src-tauri/src/` provides Git reads, explicit fast-forward updates, file previews, and the LFS filter. `scripts/` contains the palette and file-icon generation entry points. See [AGENTS.md](../AGENTS.md) for request ownership, rendering, and repository-access constraints.

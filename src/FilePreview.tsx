@@ -26,7 +26,7 @@ function SideInfo({
   const { t } = useI18n();
   return (
     <header className="preview-side-heading">
-      <strong>{label}</strong>
+      <strong title={label}>{label}</strong>
       <span>
         {side
           ? [

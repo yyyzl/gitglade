@@ -1,5 +1,11 @@
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
+    warning: (
+      <>
+        <path d="M12 3 2 21h20L12 3Z" />
+        <path d="M12 9v5m0 3h.01" />
+      </>
+    ),
     branch: (
       <>
         <circle cx="6" cy="5" r="2.5" />

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" role="img" aria-labelledby="title desc">
   <title id="title">oil-git · 看清 AI 改了什么</title>
-  <desc id="desc">只读的 Git 可视化桌面工具。右侧用真实验收仓库的合并提交和 tasks.ts 差异片段，简化展示主分支与功能分支的关系。macOS 与 Windows 的真实窗口截图和使用方法见下方 README。</desc>
+  <desc id="desc">本地 Git 可视化桌面工具。右侧用真实验收仓库的合并提交和 tasks.ts 差异片段，简化展示主分支与功能分支的关系。macOS 与 Windows 的真实窗口截图和使用方法见下方 README。</desc>
   <rect width="1200" height="460" rx="24" fill="#21252b"/>
   <g id="identity" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <g transform="translate(64 44)" fill="none" stroke="#98c379" stroke-width="3" stroke-linecap="round">
@@ -17,7 +17,7 @@
       <rect width="226" height="46" rx="12" fill="#2f343e"/>
       <text x="20" y="30" font-size="22" fill="#d7dae0">macOS · Windows</text>
       <circle cx="266" cy="23" r="5" fill="#98c379"/>
-      <text x="282" y="30" font-size="22" fill="#abb2bf">只读 · 本地</text>
+      <text x="282" y="30" font-size="22" fill="#abb2bf">Git · 本地</text>
     </g>
   </g>
   <g id="repository" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">

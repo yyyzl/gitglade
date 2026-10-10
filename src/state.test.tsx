@@ -122,6 +122,25 @@ afterEach(() => {
   localStorage.clear();
 });
 describe("真实组件的请求顺序", () => {
+  it("切换中的目标由最新打开请求持有，旧请求返回不会结束新目标的动画", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/slow");
+    });
+    const slow = take("open_repository");
+    expect(result.current.openingPath).toBe("/slow");
+    act(() => {
+      void result.current.openPath("/latest");
+    });
+    const latest = take("open_repository");
+    await answer(slow, project("/slow"));
+    expect(result.current.openingPath).toBe("/latest");
+    expect(result.current.opening).toBe(true);
+    await fail(latest, { kind: "io", message: "目标项目无法读取" });
+    expect(result.current.openingPath).toBeNull();
+    expect(result.current.opening).toBe(false);
+  });
   const treeProject = (path: string) => ({
     ...project(path),
     snapshot: {

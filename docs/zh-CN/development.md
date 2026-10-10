@@ -67,4 +67,4 @@ node scripts/ci-install-smoke.mjs --artifact-dir "/安装包所在目录" --repo
 
 ## 源码结构
 
-`src/` 包含 React 界面、状态与国际化文案，`src-tauri/src/` 提供只读 Git 接口、文件预览和 LFS 过滤器。配色和文件图标的生成入口位于 `scripts/`。请求归属、渲染和只读访问的完整约束见 [AGENTS.md](../../AGENTS.md)。
+`src/` 包含 React 界面、状态与国际化文案，`src-tauri/src/` 提供 Git 读取、显式快进更新、文件预览和 LFS 过滤器。配色和文件图标的生成入口位于 `scripts/`。请求归属、渲染和只读访问的完整约束见 [AGENTS.md](../../AGENTS.md)。

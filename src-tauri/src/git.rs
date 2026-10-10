@@ -4,6 +4,8 @@ mod file_preview;
 pub use file_preview::FilePreview;
 mod attribution;
 pub use attribution::{LineOrigin, LineOriginRequest};
+mod branches;
+pub use branches::{BranchComparison, BranchUpdate};
 use std::{
     collections::HashSet,
     ffi::OsStr,
@@ -354,10 +356,13 @@ impl Git {
         allow_failure: bool,
         input: Option<&[u8]>,
     ) -> Result<Output> {
-        self.run_with_options(repo, args, cap, allow_failure, input, false)
+        self.run_with_options(repo, args, cap, allow_failure, input, false, false)
     }
     fn run_prefix(&self, repo: &Path, args: &[&str], cap: usize) -> Result<Output> {
-        self.run_with_options(repo, args, cap, true, None, true)
+        self.run_with_options(repo, args, cap, true, None, true, false)
+    }
+    fn run_update(&self, repo: &Path, args: &[&str]) -> Result<Output> {
+        self.run_with_options(repo, args, 2 * 1024 * 1024, false, None, false, true)
     }
     fn run_with_options(
         &self,
@@ -367,10 +372,30 @@ impl Git {
         allow_failure: bool,
         input: Option<&[u8]>,
         prefix_only: bool,
+        updating: bool,
     ) -> Result<Output> {
         let process_command = self.helper_command(crate::lfs::FILTER_PROCESS_COMMAND)?;
         let clean_command = self.helper_command(crate::lfs::CLEAN_COMMAND)?;
         let mut command = Command::new(&self.binary);
+        if updating {
+            // 显式更新也不执行仓库 hooks 或递归修改子模块。
+            command.args([
+                "-c",
+                if cfg!(windows) {
+                    "core.hooksPath=NUL"
+                } else {
+                    "core.hooksPath=/dev/null"
+                },
+                "-c",
+                "gc.auto=0",
+                "-c",
+                "maintenance.auto=false",
+                "-c",
+                "submodule.recurse=false",
+                "-c",
+                "protocol.ext.allow=never",
+            ]);
+        }
         for (key, _) in std::env::vars_os().filter(|(key, _)| should_remove_git_environment(key)) {
             command.env_remove(key);
         }
@@ -418,7 +443,12 @@ impl Git {
         #[cfg(windows)]
         let job = JobHandle::create()
             .map_err(|e| Error::new("process", format!("无法管理 Git 子进程：{e}")))?;
-        let deadline = Instant::now() + GIT_TIMEOUT;
+        let deadline = Instant::now()
+            + if updating {
+                Duration::from_secs(120)
+            } else {
+                GIT_TIMEOUT
+            };
         let mut child = command
             .spawn()
             .map_err(|e| Error::new("gitUnavailable", format!("无法启动 Git：{e}")))?;
@@ -509,6 +539,12 @@ impl Git {
             return Err(error.into());
         }
         if timed_out {
+            if updating {
+                return Err(Error::new(
+                    "updateFailed",
+                    "Git 更新超时，请重新检查仓库的实际状态。",
+                ));
+            }
             let message = if cfg!(target_os = "macos") {
                 "Git 读取超时。如果 macOS 正在询问文件访问权限，请处理后重试。"
             } else {

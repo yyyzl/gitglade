@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero-en.svg" width="100%" alt="oil-git is a read-only desktop Git viewer that helps you see what changed." />
+  <img src="./assets/readme/hero-en.svg" width="100%" alt="oil-git is a desktop Git viewer that helps you see what changed." />
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
   · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-**oil-git is a read-only desktop viewer for local Git repositories.** Open a project to inspect its current branch, working tree changes, commit history, and file diffs. Keep using Git in your editor, terminal, or agent; oil-git follows changes made to the real repository.
+**oil-git is a desktop viewer for local Git repositories.** Open a project to inspect its current branch, working tree changes, commit history, and file diffs. Keep using Git in your editor, terminal, or agent; oil-git follows changes made to the real repository.
 
 ## What you can inspect
 
@@ -32,7 +32,7 @@
 
 Repository names, branches, commit messages, paths, and author details remain exactly as Git records them when the interface language changes.
 
-The left sidebar switches between the working tree and commit history. Choose a commit and one of its changed files on the left; both views share the full diff reader on the right. Branch and tag filters only change the displayed history. Switching worktrees keeps the original project and recent-project entry while observing the selected directory.
+The left sidebar switches between the working tree, commit history, and branch comparison. Choose a commit and one of its changed files on the left; both views share the full diff reader on the right. Branch and tag filters only change the displayed history. Switching worktrees keeps the original project and recent-project entry while observing the selected directory.
 
 The interface supports English and Simplified Chinese. It follows the system language on first launch, then remembers the language you choose. Dark, light, and green themes are available as well.
 
@@ -56,9 +56,9 @@ oil-git --lang en --help
 
 Use `--lang en` or `--lang zh-CN` with CLI commands to choose the language explicitly. Without it, each invocation reads the locale environment variables and defaults to English when none are set. This is independent of the saved interface language. `inspect` reads the local repository and does not open the app. The Skill is included with the package; installing oil-git does not change the host agent's settings. See the [CLI guide](docs/usage.md#cli-and-ai-agents) for launcher paths and integration details.
 
-## Read-only boundary
+## Repository access
 
-oil-git does not commit, stage, switch branches, merge, fetch, pull, reset, or undo changes. It does not modify the observed repository's files, index, refs, configuration, or LFS object store.
+Viewing, branch comparison, and the CLI are read-only. **Update branch** checks the selected remote branch, then updates the current worktree branch only after you confirm a fast-forward. Divergence, changed tracked files, or an active Git operation stop the update; local commits are retained. This flow does not change upstream configuration, run repository hooks, or download LFS content. Updates requiring content filters must be performed in your Git tool. There are no commit, stage, checkout, rebase, reset, stash, or push commands.
 
 - Standard Git LFS pointers are read with the app's built-in read-only filter. The app shows object IDs and sizes without downloading file contents. Custom LFS commands and extensions are unsupported.
 - Repository-defined external content filters and converters are not run. If a filter prevents a safe read, the app explains the limitation.

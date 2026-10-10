@@ -1,0 +1,254 @@
+.view-branches {
+  display: none;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+}
+.view-branches.active {
+  display: flex;
+}
+.branch-navigation,
+.branch-reader {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.branch-controls {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.branch-controls > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.branch-controls > header span,
+.branch-controls > small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.branch-controls > label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.branch-controls > .dropdown-trigger {
+  width: 100%;
+  max-width: none;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.branch-controls > p {
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.branch-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  gap: 12px;
+}
+.branch-navigation .file-list {
+  min-height: 0;
+  overflow: auto;
+  flex: 1;
+}
+.branch-navigation .file-name > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.branch-navigation .file-name > small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.branch-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  font-size: 12px;
+  min-width: 0;
+  background: var(--editor-header);
+}
+.branch-context > span {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.branch-context > strong {
+  font: 12px var(--mono);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-reader > .changes-editor {
+  flex: 1;
+  min-height: 0;
+}
+.branch-update-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.branch-update-panel {
+  position: fixed;
+  z-index: 40;
+  top: 59px;
+  left: clamp(12px, 34vw, calc(100vw - 462px));
+  width: min(450px, calc(100vw - 24px));
+  max-height: calc(100dvh - 75px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 12px 38px #0005;
+  animation: branch-panel 180ms ease-out;
+}
+.branch-update-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+.branch-update-panel h2 {
+  margin: 7px 0 16px;
+  font-size: 17px;
+}
+.branch-update-panel small,
+.branch-update-panel label {
+  color: var(--muted);
+  font-size: 11px;
+}
+.branch-update-panel dl {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12px;
+  border-block: 1px solid var(--line);
+  padding: 12px 0;
+  margin: 0 0 14px;
+}
+.branch-update-panel dt {
+  color: var(--muted);
+}
+.branch-update-panel dd {
+  margin: 0;
+  font: 12px/1.7 var(--mono);
+  overflow-wrap: anywhere;
+}
+.branch-update-panel > .dropdown-trigger {
+  width: 100%;
+  max-width: none;
+  margin-top: 7px;
+  background: var(--bg);
+}
+.branch-update-body {
+  padding: 18px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.branch-update-body p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  color: var(--muted);
+}
+.branch-update-body ul {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+}
+.branch-update-body li {
+  border-bottom: 1px solid var(--line);
+  padding: 7px 0;
+  overflow-wrap: anywhere;
+}
+.branch-update-body button {
+  color: var(--accent);
+  padding-left: 0;
+}
+.branch-update-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.branch-success,
+.branch-update-body .branch-success {
+  color: var(--added);
+}
+.branch-warning {
+  color: var(--modified);
+}
+.branch-update-error {
+  padding: 12px;
+  border-radius: 5px;
+  background: var(--error-bg);
+  color: var(--error-fg);
+  overflow-wrap: anywhere;
+}
+.branch-update-error > strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.branch-update-error .error-diagnostic {
+  color: var(--text);
+}
+.branch-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: branch-spin 700ms linear infinite;
+}
+@keyframes branch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes branch-panel {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .branch-update-panel,
+  .branch-spinner {
+    animation: none;
+  }
+}
+@media (max-width: 900px) {
+  .view-tabs > button {
+    padding-inline: 7px;
+    gap: 5px;
+  }
+  .branch-update-trigger {
+    padding-inline: 7px;
+  }
+  .branch-controls {
+    padding-inline: 12px;
+  }
+}

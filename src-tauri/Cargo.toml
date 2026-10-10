@@ -2,7 +2,7 @@
 name = "oil-git"
 version = "0.1.0"
 edition = "2021"
-description = "A read-only Git desktop viewer"
+description = "A local Git desktop viewer"
 license = "MIT"
 repository = "https://github.com/oil-oil/oil-git"
 

@@ -2,7 +2,7 @@
 
 [简体中文](docs/zh-CN/contributing.md)
 
-oil-git is a read-only desktop viewer for real Git repositories. Contributions should help people understand branches, commits, and changes without altering the repository they are viewing.
+oil-git is a desktop viewer for real Git repositories. Viewing remains read-only; the explicit fetch-and-fast-forward update flow is defined in AGENTS.md. Contributions should help people understand branches, commits, and changes.
 
 ## Issues and proposals
 

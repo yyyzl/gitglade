@@ -111,7 +111,12 @@ export type Selection =
   | { kind: "stashes" }
   | { kind: "commit"; hash: string }
   | null;
-export type DiffMode = "unstaged" | "staged" | "conflict" | "commit";
+export type DiffMode =
+  | "unstaged"
+  | "staged"
+  | "conflict"
+  | "commit"
+  | "branches";
 export type DiffOrigin = {
   repoId: string;
   path: string;
@@ -119,6 +124,29 @@ export type DiffOrigin = {
   commit?: string;
   historyRevision?: string;
   changesRevision?: string;
+  beforeCommit?: string;
+  afterCommit?: string;
+  beforePath?: string;
+};
+export type BranchComparison = {
+  base: string;
+  target: string;
+  baseCommit: string;
+  targetCommit: string;
+  revision: string;
+  files: CommitFile[];
+  filePath: string | null;
+  diff: Diff | null;
+};
+export type BranchUpdate = {
+  branch: string;
+  source: string;
+  head: string;
+  target: string;
+  ahead: number;
+  behind: number;
+  status: "ready" | "dirty" | "diverged" | "ahead" | "upToDate" | "operation";
+  commits: Commit[];
 };
 export type LineOrigin = {
   hash: string | null;

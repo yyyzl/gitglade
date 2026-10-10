@@ -53,7 +53,8 @@ export function useRepository() {
     forgotten: Set<string>;
     withinProject: boolean;
   } | null>(null);
-  const [opening, setOpening] = useState(false);
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
+  const opening = openingPath !== null;
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState<History>(empty);
   const [reference, setReference] = useState("all");
@@ -216,7 +217,7 @@ export function useRepository() {
       const forgottenForThisOpen = retryIntent ?? new Set<string>();
       recentOpenIntent.current = forgottenForThisOpen;
       const ticket = openGate.current.next();
-      setOpening(true);
+      setOpeningPath(path);
       failedOpen.current = {
         path,
         view,
@@ -352,7 +353,7 @@ export function useRepository() {
       } catch (e) {
         if (openGate.current.accepts(ticket)) setOpenError(errorOf(e));
       } finally {
-        if (openGate.current.accepts(ticket)) setOpening(false);
+        if (openGate.current.accepts(ticket)) setOpeningPath(null);
       }
     },
     [loadHistory],
@@ -364,7 +365,7 @@ export function useRepository() {
       if (path === target.snapshot.path) {
         openGate.current.invalidate();
         failedOpen.current = null;
-        setOpening(false);
+        setOpeningPath(null);
         setOpenError(null);
         return;
       }
@@ -372,7 +373,7 @@ export function useRepository() {
       if (!tree?.available || tree.bare) {
         openGate.current.invalidate();
         failedOpen.current = null;
-        setOpening(false);
+        setOpeningPath(null);
         setOpenError({
           kind: "path",
           message: "工作树目录不可用。",
@@ -561,6 +562,7 @@ export function useRepository() {
         ? null
         : snapshotError,
     opening,
+    openingPath,
     refreshing,
     syncing:
       opening ||

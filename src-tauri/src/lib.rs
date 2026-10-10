@@ -520,6 +520,45 @@ async fn get_line_origin(
     blocking(move || git.line_origin(&repo, &request)).await
 }
 #[tauri::command]
+async fn get_branch_comparison(
+    state: State<'_, AppState>,
+    repo_id: String,
+    base: String,
+    target: String,
+    path: Option<String>,
+    expected_history_revision: Option<String>,
+) -> Result<git::BranchComparison> {
+    let (git, repo) = context(&state, &repo_id)?;
+    blocking(move || {
+        git.compare_branches(
+            &repo,
+            &base,
+            &target,
+            path.as_deref(),
+            expected_history_revision.as_deref(),
+        )
+    })
+    .await
+}
+#[tauri::command]
+async fn check_branch_update(
+    state: State<'_, AppState>,
+    repo_id: String,
+    source: Option<String>,
+) -> Result<git::BranchUpdate> {
+    let (git, repo) = context(&state, &repo_id)?;
+    blocking(move || git.check_branch_update(&repo, source.as_deref())).await
+}
+#[tauri::command]
+async fn fast_forward_branch(
+    state: State<'_, AppState>,
+    repo_id: String,
+    expected: git::BranchUpdate,
+) -> Result<git::BranchUpdate> {
+    let (git, repo) = context(&state, &repo_id)?;
+    blocking(move || git.fast_forward_branch(&repo, &expected)).await
+}
+#[tauri::command]
 fn open_git_install(app: tauri::AppHandle) -> Result<()> {
     #[cfg(target_os = "macos")]
     let url = "https://git-scm.com/download/mac";
@@ -568,9 +607,9 @@ pub fn run() {
     }
     if args.first().is_some_and(|a| a == "--help" || a == "-h") {
         if language == CliLanguage::Chinese {
-            println!("oil-git 只读 Git 查看工具\n\n用法：\n打开：oil-git open <项目路径> [--view changes|history]\n读取：oil-git inspect <项目路径> --json\nSkill：oil-git skill [--path]\n语言：oil-git --lang en|zh-CN <命令>\n无参数启动桌面界面。");
+            println!("oil-git 本地 Git 查看工具\n\n用法：\n打开：oil-git open <项目路径> [--view changes|history]\n读取：oil-git inspect <项目路径> --json\nSkill：oil-git skill [--path]\n语言：oil-git --lang en|zh-CN <命令>\n无参数启动桌面界面。");
         } else {
-            println!("oil-git read-only Git viewer\n\nUsage:\nOpen: oil-git open <project-path> [--view changes|history]\nInspect: oil-git inspect <project-path> --json\nSkill: oil-git skill [--path]\nLanguage: oil-git --lang en|zh-CN <command>\nRun without arguments to launch the desktop app.");
+            println!("oil-git local Git viewer\n\nUsage:\nOpen: oil-git open <project-path> [--view changes|history]\nInspect: oil-git inspect <project-path> --json\nSkill: oil-git skill [--path]\nLanguage: oil-git --lang en|zh-CN <command>\nRun without arguments to launch the desktop app.");
         }
         return;
     }
@@ -673,6 +712,9 @@ pub fn run() {
             get_commit_view,
             get_diff,
             get_line_origin,
+            get_branch_comparison,
+            check_branch_update,
+            fast_forward_branch,
             open_git_install
         ])
         .run(tauri::generate_context!())

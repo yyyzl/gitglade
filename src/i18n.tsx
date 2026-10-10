@@ -14,6 +14,72 @@ type Translation = string | { one: string; other: string };
 // Chinese phrases are the source keys; each visible string has one English
 // translation here so component state and presentation stay independent.
 const en: Record<string, Translation> = {
+  变更文件: "Changed files",
+  远端检查失败: "Remote check failed",
+  更新结果未确认: "Update result could not be confirmed",
+  "本地分支未更新。": "The local branch was not updated.",
+  分支对比: "Branch comparison",
+  比较分支: "Compare branches",
+  "基准 · 左侧": "Base · left",
+  "目标 · 右侧": "Target · right",
+
+  远端记录: "Remote records",
+  选择基准分支: "Select base branch",
+  选择目标分支: "Select target branch",
+  交换方向: "Swap direction",
+  选择尚未应用: "Selection not applied",
+  目标分支相对于基准分支的变更: "Changes in the target relative to the base",
+  远端分支来自本地保存的记录: "Remote branches use locally stored records",
+
+  两个分支没有文件差异: "No file differences between these branches",
+  "选择两个分支，查看文件差异": "Select two branches to view file differences",
+  正在查看: "Showing",
+  "对比未更新，当前保留上次结果。":
+    "Comparison was not updated. Previous results are retained.",
+  "请求：{value}": "Requested: {value}",
+  "基准：{value}": "Base: {value}",
+  "目标：{value}": "Target: {value}",
+  更新分支: "Update branch",
+  更新本地分支: "Update local branch",
+  "当前为分离 HEAD，无法更新本地分支。":
+    "Detached HEAD cannot be updated as a local branch.",
+  关闭更新面板: "Close branch update panel",
+  远端来源: "Remote source",
+  选择远端来源: "Select remote source",
+  先检查远端的最新提交: "Check the latest remote commits first",
+  正在检查远端: "Checking the remote",
+  正在快进更新: "Fast-forwarding branch",
+  "已快进 {count} 个提交": "Fast-forwarded {count} commits",
+  可以快进更新: "Ready to fast-forward",
+  "工作区还有更改，暂不能更新": "Working tree changes prevent an update",
+  "分支已分叉，无法快进": "Branches have diverged; fast-forward is unavailable",
+  "本地分支领先远端，保留本地提交":
+    "Local branch is ahead; local commits are retained",
+  已是最新: "Already up to date",
+  "工作树正在进行 Git 操作，暂不能更新":
+    "A Git operation is in progress; update is unavailable",
+  "仓库状态已变化，请重新检查": "Repository state changed; check again",
+  "本地独有 {ahead} 个提交，远端独有 {behind} 个提交":
+    "{ahead} local-only commits, {behind} remote-only commits",
+  "本次没有更新分支，本地提交已保留。":
+    "The branch was not updated. Local commits were retained.",
+  查看工作区: "View working tree",
+  查看更新差异: "View incoming changes",
+  查看分支差异: "View branch differences",
+  "仅快进更新 · 保留本地提交": "Fast-forward only · retain local commits",
+  检查远端更新: "Check remote updates",
+  重新检查: "Check again",
+  完成: "Done",
+  "正在处理…": "Processing…",
+  "该仓库正在更新，请稍后重试。":
+    "This repository is being updated. Try again shortly.",
+  "无法确定此远端记录的更新来源。":
+    "The remote source for this record could not be determined.",
+  "更新条件已变化，请重新检查。": "Update conditions changed. Check again.",
+  "无法确认更新结果，请检查仓库状态。":
+    "The update could not be confirmed. Inspect the repository state.",
+  "本次更新需要内容过滤器，请在 Git 工具中更新。":
+    "This update requires content filters. Update it with a Git tool.",
   打开项目: "Open Project",
   "打开 Git 项目": "Open Git project",
   打开其他项目: "Open Another Project",
@@ -194,6 +260,7 @@ const en: Record<string, Translation> = {
   "正在读取最后修改者…": "Reading last change…",
   复制代码行归属: "Copy line attribution",
   正在同步仓库: "Syncing repository",
+  "正在切换项目…": "Switching project…",
   "无法解码此格式，可在下方查看字节差异。":
     "This format could not be decoded. Byte differences are available below.",
   "此格式显示文件信息和字节差异。":
@@ -390,6 +457,13 @@ export function translate(
 }
 
 const errorMessages: Record<string, string> = {
+  updateFetch: "本地分支未更新。",
+  updateBusy: "该仓库正在更新，请稍后重试。",
+  updateSource: "无法确定此远端记录的更新来源。",
+  updateDetached: "当前为分离 HEAD，无法更新本地分支。",
+  updateStale: "更新条件已变化，请重新检查。",
+  updateFailed: "无法确认更新结果，请检查仓库状态。",
+  updateFilter: "本次更新需要内容过滤器，请在 Git 工具中更新。",
   desktopRequired: "请在 oil-git 桌面应用中打开。本地仓库读取需要桌面环境。",
   arguments: "命令参数无效。运行 oil-git --help 查看用法。",
   bare: "裸仓库暂不支持。请打开带工作目录的 Git 项目。",

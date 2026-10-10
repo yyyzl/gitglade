@@ -573,6 +573,30 @@ describe("两栏导航与共享差异", () => {
     expect(repo.openPath).toHaveBeenCalledWith("/other");
     expect(focus).not.toHaveBeenCalled();
   });
+  it("切换项目立即提示目标和动画，保留当前内容，结束后移除提示", () => {
+    repo.opening = true;
+    repo.openingPath = "/projects/新项目";
+    const view = render(<App />);
+    expect(screen.getByText("正在切换项目…")).toBeTruthy();
+    expect(screen.getByText("新项目").getAttribute("title")).toBe(
+      "/projects/新项目",
+    );
+    expect(
+      document.querySelector(".project-opening .branch-spinner"),
+    ).toBeTruthy();
+    expect(screen.getByText("真实提交")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "更新分支" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    repo.opening = false;
+    repo.openingPath = null;
+    repo.error = { kind: "io", message: "目标项目无法读取" };
+    view.rerender(<App />);
+    expect(document.querySelector(".project-opening")).toBeNull();
+    expect(screen.getByText("目标项目无法读取")).toBeTruthy();
+    expect(screen.getByText("真实提交")).toBeTruthy();
+  });
   it("相同版本的文件差异直接复用，外部修改后重新读取", async () => {
     const view = render(<App />);
     fireEvent.click(screen.getByRole("tab", { name: "工作区" }));

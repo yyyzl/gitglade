@@ -585,7 +585,9 @@ export function CodeDiff(props: PatchCodeDiffProps | RawCodeDiffProps) {
     <div className="split-editor code-diff-split" ref={splitRoot}>
       {[0, 1].map((side) => (
         <section className="split-side" key={side}>
-          <div className="split-label">{labels[side]}</div>
+          <div className="split-label" title={labels[side]}>
+            {labels[side]}
+          </div>
           <div
             className="code-viewport code-diff-viewport"
             ref={viewports[side]}
