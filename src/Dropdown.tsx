@@ -174,7 +174,9 @@ export function Dropdown({
         aria-expanded={open}
         aria-controls={mounted ? id : undefined}
         disabled={disabled}
-        title={selected?.description || selected?.label}
+        title={[selected?.label ?? label, selected?.description]
+          .filter(Boolean)
+          .join("\n")}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -276,7 +278,9 @@ export function Dropdown({
                         option.disabled || busy || removingValue !== null
                       }
                       data-active={index === active}
-                      title={option.description || option.label}
+                      title={[option.label, option.description]
+                        .filter(Boolean)
+                        .join("\n")}
                       onPointerMove={() => setActive(index)}
                       onClick={() => choose(option)}
                     >

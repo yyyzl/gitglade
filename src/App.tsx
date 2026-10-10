@@ -14,6 +14,7 @@ import { ReadStatus } from "./ReadStatus";
 import { SyncIndicator } from "./SyncIndicator";
 import { useI18n } from "./i18n";
 import { ErrorMessage } from "./ErrorMessage";
+import { HoverTooltip } from "./HoverTooltip";
 export default function App() {
   const repo = useRepository();
   const { theme, setTheme } = useTheme();
@@ -744,6 +745,7 @@ export default function App() {
           </section>
         </main>
       )}
+      <HoverTooltip />
     </div>
   );
 }
