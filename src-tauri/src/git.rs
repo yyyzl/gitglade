@@ -59,6 +59,13 @@ struct CachedCommit {
     revision: String,
     detail: CommitDetail,
 }
+struct RunOptions<'a> {
+    cap: usize,
+    allow_failure: bool,
+    input: Option<&'a [u8]>,
+    prefix_only: bool,
+    updating: bool,
+}
 pub struct Output {
     pub bytes: Vec<u8>,
     pub stderr: String,
@@ -366,24 +373,57 @@ impl Git {
         allow_failure: bool,
         input: Option<&[u8]>,
     ) -> Result<Output> {
-        self.run_with_options(repo, args, cap, allow_failure, input, false, false)
+        self.run_with_options(
+            repo,
+            args,
+            RunOptions {
+                cap,
+                allow_failure,
+                input,
+                prefix_only: false,
+                updating: false,
+            },
+        )
     }
     fn run_prefix(&self, repo: &Path, args: &[&str], cap: usize) -> Result<Output> {
-        self.run_with_options(repo, args, cap, true, None, true, false)
+        self.run_with_options(
+            repo,
+            args,
+            RunOptions {
+                cap,
+                allow_failure: true,
+                input: None,
+                prefix_only: true,
+                updating: false,
+            },
+        )
     }
     fn run_update(&self, repo: &Path, args: &[&str]) -> Result<Output> {
-        self.run_with_options(repo, args, 2 * 1024 * 1024, false, None, false, true)
+        self.run_with_options(
+            repo,
+            args,
+            RunOptions {
+                cap: 2 * 1024 * 1024,
+                allow_failure: false,
+                input: None,
+                prefix_only: false,
+                updating: true,
+            },
+        )
     }
     fn run_with_options(
         &self,
         repo: &Path,
         args: &[&str],
-        cap: usize,
-        allow_failure: bool,
-        input: Option<&[u8]>,
-        prefix_only: bool,
-        updating: bool,
+        options: RunOptions<'_>,
     ) -> Result<Output> {
+        let RunOptions {
+            cap,
+            allow_failure,
+            input,
+            prefix_only,
+            updating,
+        } = options;
         let process_command = self.helper_command(crate::lfs::FILTER_PROCESS_COMMAND)?;
         let clean_command = self.helper_command(crate::lfs::CLEAN_COMMAND)?;
         let mut command = Command::new(&self.binary);
