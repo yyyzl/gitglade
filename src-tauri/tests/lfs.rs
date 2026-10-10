@@ -144,11 +144,10 @@ impl Fixture {
         }) {
             command.env_remove(key);
         }
+        // Use a real empty file: Git 2.56 on Windows rejects NUL as a config path.
+        let empty_config = tempfile::NamedTempFile::new_in(self._temp.path()).unwrap();
         command
-            .env(
-                "GIT_CONFIG_GLOBAL",
-                if cfg!(windows) { "NUL" } else { "/dev/null" },
-            )
+            .env("GIT_CONFIG_GLOBAL", empty_config.path())
             .env("GIT_CONFIG_NOSYSTEM", "1");
         let mut child = command.spawn().unwrap();
         if let Some(input) = input {
@@ -513,7 +512,11 @@ fn unresolved_lfs_conflict_uses_index_stage_pointers_and_never_hashes_markers() 
     let ours_content = b"current branch materialized content";
     let theirs_content = b"incoming branch materialized content";
     let switched = f.raw_git_without_filters(&["switch", "-c", "current"], None);
-    assert!(switched.status.success());
+    assert!(
+        switched.status.success(),
+        "switch current failed: {}",
+        String::from_utf8_lossy(&switched.stderr)
+    );
     f.write("conflict.bin", ours_content);
     f.cmd(&["add", "--", "conflict.bin"]);
     f.commit("current branch LFS change");
