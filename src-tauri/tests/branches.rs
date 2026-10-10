@@ -21,6 +21,7 @@ impl Fixture {
         fs::create_dir(&peer).unwrap();
         let git = Git::discover().unwrap().0;
         command(&git, &peer, &["init", "-b", "main"]);
+        command(&git, &peer, &["config", "core.autocrlf", "false"]);
         command(&git, &peer, &["config", "user.name", "分支验证"]);
         command(
             &git,
@@ -35,6 +36,7 @@ impl Fixture {
             &root,
             &["clone", peer.to_str().unwrap(), repo.to_str().unwrap()],
         );
+        command(&git, &repo, &["config", "core.autocrlf", "false"]);
         command(&git, &repo, &["config", "user.name", "分支验证"]);
         command(
             &git,
@@ -59,7 +61,17 @@ impl Fixture {
 }
 fn command(git: &Git, repo: &Path, args: &[&str]) -> String {
     let output = Command::new(&git.binary)
-        .args(["-C"])
+        // Keep fixture setup deterministic across host Git configurations:
+        // no CRLF checkout conversion or detached maintenance/index writes.
+        .args([
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "gc.auto=0",
+            "-c",
+            "maintenance.auto=false",
+            "-C",
+        ])
         .arg(repo)
         .args(args)
         .output()
