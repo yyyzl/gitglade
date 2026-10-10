@@ -2096,11 +2096,16 @@ html {
 .history-panel .commit-refs {
   min-width: 0;
   max-width: none;
-  flex-shrink: 1;
+  flex: 1;
 }
 .history-panel .commit-refs .ref {
+  display: block;
   flex-shrink: 1;
   min-width: 0;
+}
+.history-panel .ref-more {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 .history-panel .head-mark {
   flex-shrink: 0;

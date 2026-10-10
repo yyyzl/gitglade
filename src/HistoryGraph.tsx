@@ -275,12 +275,13 @@ export function HistoryGraph({
                 )}
                 {refs.length > 0 && (
                   <span className="commit-refs">
-                    {refs.map((r) => (
+                    {refs.slice(0, 1).map((r) => (
                       <span
                         key={r.fullName}
                         className={"ref " + r.kind}
                         title={r.name}
                         aria-label={r.name}
+                        tabIndex={0}
                         style={
                           r.kind === "branch"
                             ? {
@@ -294,20 +295,25 @@ export function HistoryGraph({
                             : undefined
                         }
                       >
-                        {r.name.length > 36 ? (
-                          <>
-                            <span className="ref-prefix">
-                              {r.name.slice(0, -12)}
-                            </span>
-                            <span className="ref-suffix">
-                              {r.name.slice(-12)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="ref-prefix">{r.name}</span>
-                        )}
+                        {r.name}
                       </span>
                     ))}
+                    {refs.length > 1 && (
+                      <span
+                        className="count-bubble ref-more"
+                        title={refs
+                          .slice(1)
+                          .map((r) => r.name)
+                          .join("\n")}
+                        aria-label={refs
+                          .slice(1)
+                          .map((r) => r.name)
+                          .join("\n")}
+                        tabIndex={0}
+                      >
+                        +{refs.length - 1}
+                      </span>
+                    )}
                   </span>
                 )}
                 <time
