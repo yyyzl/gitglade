@@ -60,6 +60,7 @@ function check(name, action) {
 let temporary;
 let mounted = false;
 let mountPoint;
+let macApp;
 try {
   assert.ok(["darwin", "win32"].includes(process.platform));
   temporary = fs.mkdtempSync(path.join(os.tmpdir(), "oil-git-installed-"));
@@ -93,6 +94,7 @@ try {
     ]);
     mounted = true;
     const app = path.join(temporary, "安装 with space", "oil-git.app");
+    macApp = app;
     run("ditto", [path.join(mountPoint, "oil-git.app"), app]);
     run("hdiutil", ["detach", mountPoint]);
     mounted = false;
@@ -135,6 +137,11 @@ try {
             ...args,
           ]);
   check("Version and help entry points", () => {
+    if (macApp) {
+      // 本机签名包先经过 macOS 的正常启动入口；--version 不创建原生窗口。
+      run("/usr/bin/open", ["-W", "-n", "-a", macApp, "--args", "--version"]);
+      report.launchEntry = "macOS Launch Services, then bundled CLI";
+    }
     report.version = launcher(["--version"]);
     assert.match(report.version, /^oil-git \d+\.\d+\.\d+/);
     assert.match(cli(["--help"]), /inspect/);
@@ -417,6 +424,11 @@ try {
   }
   if (temporary) {
     try {
+      if (macApp)
+        run(
+          "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister",
+          ["-u", macApp],
+        );
       fs.rmSync(temporary, { recursive: true, force: true });
     } catch (error) {
       report.cleanupError = String(error);

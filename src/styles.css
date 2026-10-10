@@ -37,6 +37,7 @@ kbd {
   color: var(--muted);
 }
 .app {
+  position: relative;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -44,6 +45,9 @@ kbd {
 }
 .toolbar-spacer {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 .icon-button {
   display: inline-flex;
@@ -570,14 +574,13 @@ kbd {
   z-index: 20;
 }
 .project-opening {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
-  padding: 10px 24px;
-  color: var(--text);
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  animation: read-hint-in 140ms var(--ease);
   font-size: 12px;
 }
 .project-opening strong {
@@ -1924,10 +1927,108 @@ html {
   background: var(--bg, #282c34);
 }
 .read-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 16px 20px;
   font-size: 12px;
   color: var(--muted);
   background: var(--bg);
+  max-width: calc(100% - 24px);
+  overflow-wrap: anywhere;
+  animation: read-hint-in 140ms var(--ease);
+}
+.project-opening > span:not(.branch-spinner) {
+  white-space: nowrap;
+}
+.read-status::before {
+  content: "";
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: branch-spin 700ms linear infinite;
+}
+.reader-activity {
+  display: inline-flex;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.read-status.read-inline {
+  display: inline-flex;
+  padding: 0;
+  background: none;
+  animation: reader-indicator-in 160ms var(--ease);
+  opacity: 1;
+  transition: opacity 160ms var(--ease);
+}
+@keyframes reader-indicator-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.read-status.read-leaving {
+  opacity: 0;
+  animation: none;
+  transition: opacity 160ms var(--ease);
+}
+.read-status.read-leaving::before {
+  animation-play-state: paused;
+}
+.reader-content {
+  height: 100%;
+  min-width: 0;
+}
+.repository-main > .active {
+  animation: read-hint-in 180ms var(--ease);
+}
+.primary:active:not(:disabled),
+.dropdown-trigger:active:not(:disabled),
+.icon-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.dropdown-trigger,
+.icon-button {
+  transition:
+    background-color var(--fast),
+    color var(--fast),
+    transform 80ms var(--ease);
+}
+@keyframes read-hint-in {
+  from {
+    opacity: 0.94;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-opening,
+  .read-status,
+  .read-status::before,
+  .repository-main > .active {
+    animation: none;
+  }
+  .read-status,
+  .read-status.read-inline,
+  .read-status.read-leaving {
+    animation: none;
+    transition: none;
+  }
+  .primary:active:not(:disabled),
+  .dropdown-trigger:active:not(:disabled),
+  .icon-button:active:not(:disabled) {
+    transform: none;
+  }
 }
 .app > .read-status {
   position: absolute;
@@ -1946,14 +2047,6 @@ html {
 }
 .working-diff {
   position: relative;
-}
-.working-diff > .read-status {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  z-index: 3;
-  background: var(--editor);
-  padding: 5px 8px;
 }
 
 .code-viewport::-webkit-scrollbar,

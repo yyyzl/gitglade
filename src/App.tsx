@@ -18,6 +18,7 @@ import { HoverTooltip } from "./HoverTooltip";
 import { BranchComparison } from "./BranchComparison";
 import { BranchUpdate } from "./BranchUpdate";
 import { useBranchComparison } from "./useBranchComparison";
+import { useContentMotion } from "./useContentMotion";
 import "./branches.css";
 export default function App() {
   const repo = useRepository();
@@ -48,6 +49,11 @@ export default function App() {
   const [commitFilesTarget, setCommitFilesTarget] =
     useState<HTMLDivElement | null>(null);
   const shell = useRef<HTMLDivElement>(null);
+  const repositoryContent = useContentMotion<HTMLElement>(
+    repo.project?.repoId ?? null,
+    "projects",
+    !!repo.project,
+  );
   const panes = usePaneLayout(shell);
   const [detailState, setDetailState] = useState<
     DetailState & { owner: string }
@@ -344,7 +350,20 @@ export default function App() {
                 onWorkspace={() => switchView("source")}
               />
             )}
-            <span className="toolbar-spacer" data-tauri-drag-region />
+            <div className="toolbar-spacer" data-tauri-drag-region>
+              {repo.opening && (
+                <div className="project-opening" role="status">
+                  <span className="branch-spinner" aria-hidden="true" />
+                  <span>{t("正在切换项目…")}</span>
+                  <strong title={repo.openingPath ?? ""}>
+                    {repo.openingPath
+                      ?.replace(/[\\/]+$/, "")
+                      .split(/[\\/]/)
+                      .pop()}
+                  </strong>
+                </div>
+              )}
+            </div>
             {s.worktrees.length > 1 && (
               <Dropdown
                 className="tree-dropdown"
@@ -402,7 +421,22 @@ export default function App() {
             </button>
           </>
         )}
-        {!s && <span className="toolbar-spacer" data-tauri-drag-region />}
+        {!s && (
+          <div className="toolbar-spacer" data-tauri-drag-region>
+            {repo.opening && (
+              <div className="project-opening" role="status">
+                <span className="branch-spinner" aria-hidden="true" />
+                <span>{t("正在切换项目…")}</span>
+                <strong title={repo.openingPath ?? ""}>
+                  {repo.openingPath
+                    ?.replace(/[\\/]+$/, "")
+                    .split(/[\\/]/)
+                    .pop()}
+                </strong>
+              </div>
+            )}
+          </div>
+        )}
         <Dropdown
           className="theme-dropdown"
           value={theme}
@@ -421,18 +455,7 @@ export default function App() {
         />
         <SyncIndicator busy={syncing} requestKey={repo.project?.repoId ?? ""} />
       </header>
-      {repo.opening && (
-        <div className="project-opening" role="status">
-          <span className="branch-spinner" aria-hidden="true" />
-          <span>{t("正在切换项目…")}</span>
-          <strong title={repo.openingPath ?? ""}>
-            {repo.openingPath
-              ?.replace(/[\\/]+$/, "")
-              .split(/[\\/]/)
-              .pop()}
-          </strong>
-        </div>
-      )}
+
       {readError && (
         <div className="error-banner" role="status">
           <div>
@@ -755,7 +778,11 @@ export default function App() {
             tabIndex={0}
             {...panes.handle("sidebar")}
           />
-          <section className="repository-main" aria-label={t("仓库内容")}>
+          <section
+            className="repository-main"
+            aria-label={t("仓库内容")}
+            ref={repositoryContent}
+          >
             <div
               className={"view-source " + (view === "source" ? "active" : "")}
               id="source-diff"
@@ -766,7 +793,8 @@ export default function App() {
             >
               <SourceEditor
                 files={s!.files}
-                file={working.file}
+                file={working.displayedFile}
+                requestedFile={working.file}
                 diff={working.diff}
                 error={working.error}
                 loading={working.loading}
@@ -774,11 +802,11 @@ export default function App() {
                 retry={working.retry}
                 active={view === "source"}
                 origin={
-                  repo.project && working.file
+                  repo.project && working.displayedFile
                     ? {
                         repoId: repo.project.repoId,
-                        path: working.file.path,
-                        mode: working.file.mode,
+                        path: working.displayedFile.path,
+                        mode: working.displayedFile.mode,
                         changesRevision: working.diffRevision,
                       }
                     : undefined

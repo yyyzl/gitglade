@@ -15,6 +15,15 @@
   min-height: 0;
   min-width: 0;
 }
+.branch-reader {
+  position: relative;
+}
+.branch-reader > .read-status {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 4;
+}
 .branch-controls {
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
@@ -159,6 +168,11 @@
   font-size: 13px;
   line-height: 1.7;
 }
+.branch-update-body > p,
+.branch-update-body > strong,
+.branch-update-error {
+  animation: read-hint-in 150ms var(--ease);
+}
 .branch-update-body p {
   display: flex;
   align-items: center;
@@ -236,7 +250,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .branch-update-panel,
-  .branch-spinner {
+  .branch-spinner,
+  .branch-update-body > p,
+  .branch-update-body > strong,
+  .branch-update-error {
     animation: none;
   }
 }

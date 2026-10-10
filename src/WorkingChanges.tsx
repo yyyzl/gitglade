@@ -12,6 +12,7 @@ import { ReadStatus } from "./ReadStatus";
 import { Collapse } from "./Collapse";
 import { useI18n } from "./i18n";
 import { ErrorMessage } from "./ErrorMessage";
+import { useContentMotion } from "./useContentMotion";
 import "./changes-tree.css";
 
 type ChangeTreeDirectory = {
@@ -200,6 +201,7 @@ function renderChangeEntries(
               : "")
           }
           style={{ "--change-tree-indent": `${depth * 12}px` } as CSSProperties}
+          aria-pressed={selected?.path === f.path && selected.mode === mode}
           aria-label={
             f.path +
             " · " +
@@ -293,6 +295,8 @@ export function SourceEditor({
   active = true,
   commit,
   comparison,
+  requestedFile = file,
+  fileOrder,
 }: {
   files: FileState[];
   file: WorkingFile | null;
@@ -305,11 +309,27 @@ export function SourceEditor({
   active?: boolean;
   commit?: CommitDetail;
   comparison?: [string, string];
+  requestedFile?: WorkingFile | null;
+  fileOrder?: readonly { path: string }[];
 }) {
   const { t } = useI18n();
   const [preferSplit, setPreferSplit] = useState(true),
     [wide, setWide] = useState(false);
   const editor = useRef<HTMLDivElement>(null);
+  const order = useMemo(
+    () =>
+      (commit?.files ?? fileOrder ?? files).map(
+        (item) => item.path + "\0" + file?.mode,
+      ),
+    [commit?.files, fileOrder, files, file?.mode],
+  );
+  const content = useContentMotion(
+    diff && file ? file.path + "\0" + file.mode : null,
+    (origin?.repoId ?? "") + "\0" + (commit?.hash ?? ""),
+    active,
+    order,
+    !commit,
+  );
   useEffect(() => {
     const el = editor.current;
     if (!el) return;
@@ -348,6 +368,19 @@ export function SourceEditor({
               <div className="file-heading-line">
                 <strong title={file.path}>{file.path.split("/").pop()}</strong>
                 <CopyButton text={file.path} label={t("复制文件路径")} />
+                <span className="reader-activity">
+                  <ReadStatus
+                    compact
+                    busy={active && loading && !error}
+                    requestKey={requestKey ?? file.path + file.mode}
+                    label={
+                      (diff ? t("正在更新差异…") : t("正在读取差异…")) +
+                      (requestedFile?.path !== file.path
+                        ? " " + (requestedFile?.path ?? "")
+                        : "")
+                    }
+                  />
+                </span>
               </div>
               {(!comparison || file.path.includes("/")) && (
                 <span className="diff-path" title={file.path}>
@@ -387,34 +420,31 @@ export function SourceEditor({
           {error && (
             <div className="history-error" role="status">
               <ErrorMessage error={error} />
-              {diff && t(" 当前保留上次读取的差异。")}
+              {diff &&
+                (requestedFile?.path !== file.path
+                  ? t("读取 {old} 失败，当前显示 {new} 的内容。", {
+                      old: requestedFile?.path ?? "",
+                      new: file.path,
+                    })
+                  : t(" 当前保留上次读取的差异。"))}
               <button onClick={retry}>{t("重试")}</button>
             </div>
           )}
           <div
             className="working-diff diff-scroll"
-            key={
-              comparison
-                ? "branches"
-                : commit
-                  ? commit.hash
-                  : file.path + file.mode
-            }
+            key={commit?.hash ?? origin?.repoId}
           >
-            <ReadStatus
-              busy={loading && !error}
-              requestKey={requestKey ?? file.path + file.mode}
-              label={diff ? t("正在更新差异…") : t("正在读取差异…")}
-            />
-            {diff ? (
-              <DiffView
-                data={diff}
-                layout={wide && preferSplit ? "split" : "unified"}
-                labels={labels}
-                origin={origin}
-                active={active}
-              />
-            ) : null}
+            <div className="reader-content" ref={content}>
+              {diff ? (
+                <DiffView
+                  data={diff}
+                  layout={wide && preferSplit ? "split" : "unified"}
+                  labels={labels}
+                  origin={origin}
+                  active={active}
+                />
+              ) : null}
+            </div>
           </div>
         </>
       ) : (

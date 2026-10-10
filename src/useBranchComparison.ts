@@ -160,6 +160,7 @@ export function useBranchComparison(project: Project | null, active: boolean) {
     ...choice,
     data,
     key,
+    requestedPath: path ?? data?.filePath ?? null,
     loading:
       active &&
       !!choice.base &&

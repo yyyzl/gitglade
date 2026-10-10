@@ -122,6 +122,62 @@ afterEach(() => {
   localStorage.clear();
 });
 describe("真实组件的请求顺序", () => {
+  it("重复选择当前项目不重新读取，也不触发切换；重复选择待打开项目只发一个请求", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/first");
+    });
+    await answer(take("open_repository"), project("/first"));
+    const history = result.current.history;
+    act(() => {
+      void result.current.openPath("/first");
+    });
+    expect(
+      queue.filter((item) => item.command === "open_repository"),
+    ).toHaveLength(0);
+    expect(result.current.opening).toBe(false);
+    expect(result.current.history).toBe(history);
+    act(() => {
+      void result.current.openPath("/second");
+    });
+    const second = take("open_repository");
+    act(() => {
+      void result.current.openPath("/second");
+    });
+    expect(
+      queue.filter((item) => item.command === "open_repository"),
+    ).toHaveLength(0);
+    expect(result.current.openingPath).toBe("/second");
+    await answer(second, project("/second"));
+    expect(result.current.project?.repoId).toBe("/second");
+  });
+  it("切换途中重选当前项目取消新项目；显式 CLI 打开仍可指定视图", async () => {
+    const { result } = renderHook(() => useRepository());
+    await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
+    act(() => {
+      void result.current.openPath("/first");
+    });
+    await answer(take("open_repository"), project("/first"));
+    act(() => {
+      void result.current.openPath("/second");
+    });
+    const second = take("open_repository");
+    act(() => {
+      void result.current.openPath("/first");
+    });
+    expect(result.current.opening).toBe(false);
+    expect(
+      queue.filter((item) => item.command === "open_repository"),
+    ).toHaveLength(0);
+    await answer(second, project("/second"));
+    expect(result.current.project?.repoId).toBe("/first");
+    act(() => {
+      void result.current.openPath("/first", "changes");
+    });
+    await answer(take("open_repository"), project("/first"));
+    expect(result.current.viewRequest?.view).toBe("changes");
+  });
   it("切换中的目标由最新打开请求持有，旧请求返回不会结束新目标的动画", async () => {
     const { result } = renderHook(() => useRepository());
     await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
@@ -140,6 +196,36 @@ describe("真实组件的请求顺序", () => {
     await fail(latest, { kind: "io", message: "目标项目无法读取" });
     expect(result.current.openingPath).toBeNull();
     expect(result.current.opening).toBe(false);
+  });
+  it("工作区换文件保留已显示内容与路径，失败不把旧 Diff 放到新文件名下", async () => {
+    const p = project("workspace");
+    p.snapshot.files = ["a.txt", "b.txt", "c.txt"].map((path) => ({
+      path,
+      oldPath: null,
+      xy: " M",
+      conflict: false,
+      untracked: false,
+      staged: false,
+      unstaged: true,
+    }));
+    const { result, rerender } = renderHook(() => useWorkingCopy(p, true));
+    await answer(take("get_diff"), commitDiff("A 内容"));
+    act(() => result.current.choose({ path: "b.txt", mode: "unstaged" }));
+    expect(result.current.diff?.patch).toContain("A 内容");
+    expect(result.current.displayedFile?.path).toBe("a.txt");
+    expect(result.current.file?.path).toBe("b.txt");
+    await answer(take("get_diff"), commitDiff("B 内容"));
+    expect(result.current.displayedFile?.path).toBe("b.txt");
+    act(() => result.current.choose({ path: "c.txt", mode: "unstaged" }));
+    await fail(take("get_diff"), { kind: "io", message: "C 文件无法读取" });
+    expect(result.current.diff?.patch).toContain("B 内容");
+    expect(result.current.displayedFile?.path).toBe("b.txt");
+    expect(result.current.file?.path).toBe("c.txt");
+    expect(result.current.error?.message).toBe("C 文件无法读取");
+    p.snapshot = { ...p.snapshot, files: [], changesRevision: "clean" };
+    rerender();
+    expect(result.current.displayedFile).toBeNull();
+    expect(result.current.diff).toBeNull();
   });
   const treeProject = (path: string) => ({
     ...project(path),
@@ -212,6 +298,14 @@ describe("真实组件的请求顺序", () => {
     });
     expect(result.current.recents).toEqual([{ path: "/root", name: "/root" }]);
     expect(localStorage.getItem("oil-git.worktree./root")).toBe("/trees/topic");
+    act(() => {
+      void result.current.openPath("/root");
+    });
+    expect(result.current.project?.repoId).toBe("/trees/topic");
+    expect(result.current.opening).toBe(false);
+    expect(queue.some((item) => item.command === "open_repository")).toBe(
+      false,
+    );
     act(() => {
       void result.current.switchWorktree("/root");
     });
@@ -306,6 +400,10 @@ describe("真实组件的请求顺序", () => {
       false,
     );
     localStorage.setItem("oil-git.worktree./root", "/missing");
+    act(() => {
+      void result.current.openPath("/other");
+    });
+    await answer(take("open_repository"), project("/other"));
     act(() => {
       void result.current.openPath("/root");
     });
@@ -1156,7 +1254,10 @@ describe("真实组件的请求顺序", () => {
         combined("a", "A", "第二个文件", "second.txt"),
       );
       expect(container.querySelector(".diff-scroll")).toBe(viewport);
-      expect(animate).toHaveBeenCalledTimes(2);
+      expect(animate).toHaveBeenCalledTimes(3);
+      expect((animate.mock.contexts[2] as HTMLElement).className).toBe(
+        "reader-content",
+      );
     } finally {
       Element.prototype.animate = original;
     }
@@ -1247,8 +1348,11 @@ describe("真实组件的请求顺序", () => {
     expect(
       container.querySelector(".file-heading-line strong")?.textContent,
     ).toBe("first.txt");
-    act(() => vi.advanceTimersByTime(200));
-    expect(screen.getByRole("status").textContent).toContain("正在更新");
+    act(() => vi.advanceTimersByTime(400));
+    const reading = screen.getByRole("status");
+    expect(reading.getAttribute("aria-label")).toContain("正在更新");
+    expect(reading.closest(".editor-heading")).toBeTruthy();
+    expect(container.querySelector(".working-diff > .read-status")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /first.txt/ }));
     await act(async () => {});
     await answer(

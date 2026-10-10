@@ -138,6 +138,7 @@ export function useCommitView(
     loading: !!hash && active && (state.key !== key || state.loading),
     error: state.key === key ? state.error : null,
     requestKey: key,
+    requestedPath: path ?? data?.filePath ?? null,
     choose,
     retry: () => setRetry((value) => value + 1),
   };

@@ -5,22 +5,53 @@ export function ReadStatus({
   busy = true,
   requestKey,
   label,
+  compact = false,
 }: {
   busy?: boolean;
   requestKey: string;
   label: string;
+  compact?: boolean;
 }) {
-  const [visibleKey, setVisibleKey] = useState<string | null>(null);
+  const [shown, setShown] = useState<{
+    key: string;
+    label: string;
+    leaving: boolean;
+  } | null>(null);
+  const [active, setActive] = useState(document.visibilityState === "visible");
   useEffect(() => {
-    setVisibleKey(null);
-    if (!busy) return;
-    const timer = setTimeout(() => setVisibleKey(requestKey), 200);
+    const visibility = () => setActive(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", visibility);
+    return () => document.removeEventListener("visibilitychange", visibility);
+  }, []);
+  useEffect(() => {
+    setShown((old) =>
+      !active || old?.key !== requestKey
+        ? null
+        : old
+          ? { ...old, leaving: !busy }
+          : null,
+    );
+    if (!active) return;
+    const timer = setTimeout(
+      () => setShown(busy ? { key: requestKey, label, leaving: false } : null),
+      busy ? (compact ? 400 : 200) : 160,
+    );
     return () => clearTimeout(timer);
-  }, [busy, requestKey]);
-  if (!busy || visibleKey !== requestKey) return null;
+  }, [busy, requestKey, active, compact]);
+  if (!active || shown?.key !== requestKey) return null;
   return (
-    <div className="read-status" role="status">
-      {label}
+    <div
+      className={
+        "read-status" +
+        (compact ? " read-inline" : "") +
+        (shown.leaving ? " read-leaving" : "")
+      }
+      role={shown.leaving ? undefined : "status"}
+      aria-hidden={shown.leaving || undefined}
+      aria-label={compact && !shown.leaving ? shown.label : undefined}
+      title={compact && !shown.leaving ? shown.label : undefined}
+    >
+      {!compact && shown.label}
     </div>
   );
 }

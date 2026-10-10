@@ -100,12 +100,12 @@ export function BranchComparison({
         {data?.files.map((file) => (
           <button
             className={
-              "file-row " + (data.filePath === file.path ? "active" : "")
+              "file-row " + (view.requestedPath === file.path ? "active" : "")
             }
             key={file.path}
             title={file.path + (file.oldPath ? " ← " + file.oldPath : "")}
             aria-label={file.path}
-            aria-pressed={data.filePath === file.path}
+            aria-pressed={view.requestedPath === file.path}
             disabled={!same}
             onClick={() => view.chooseFile(file.path)}
           >
@@ -154,7 +154,7 @@ export function BranchComparison({
         </div>
       )}
       <ReadStatus
-        busy={view.loading}
+        busy={view.loading && (!same || !data?.filePath)}
         requestKey={view.key}
         label={data ? t("正在更新差异…") : t("正在读取差异…")}
       />
@@ -169,6 +169,12 @@ export function BranchComparison({
               })}
             </span>
           )}
+          {same &&
+            view.requestedPath !== data?.filePath &&
+            t("读取 {old} 失败，当前显示 {new} 的内容。", {
+              old: view.requestedPath ?? "",
+              new: data?.filePath ?? "",
+            })}
           <button onClick={view.retry}>{t("重试")}</button>
         </div>
       )}
@@ -180,6 +186,14 @@ export function BranchComparison({
           error={null}
           retry={view.retry}
           active={active}
+          fileOrder={data.files}
+          loading={same && view.loading && !view.error}
+          requestKey={view.key}
+          requestedFile={
+            view.requestedPath
+              ? { path: view.requestedPath, mode: "branches" }
+              : null
+          }
           comparison={[
             t("基准：{value}", { value: name(data.base) }),
             t("目标：{value}", { value: name(data.target) }),

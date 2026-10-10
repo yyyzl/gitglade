@@ -105,11 +105,12 @@ export function Details({
               return (
                 <button
                   className={
-                    "file-row " + (data.filePath === file.path ? "active" : "")
+                    "file-row " +
+                    (view.requestedPath === file.path ? "active" : "")
                   }
                   key={file.path}
                   aria-label={file.path}
-                  aria-pressed={data.filePath === file.path}
+                  aria-pressed={view.requestedPath === file.path}
                   title={file.path + (file.oldPath ? " ← " + file.oldPath : "")}
                   disabled={!sameCommit}
                   onClick={() => view.choose(file.path)}
@@ -194,7 +195,7 @@ export function Details({
             <>
               {filesTarget ? createPortal(files, filesTarget) : files}
               <ReadStatus
-                busy={view.loading}
+                busy={view.loading && (!sameCommit || !data?.filePath)}
                 requestKey={view.requestKey}
                 label={sameCommit ? t("正在更新差异…") : t("正在读取提交…")}
               />
@@ -209,6 +210,12 @@ export function Details({
                       new: data.detail.hash.slice(0, 8),
                     })}
                   <ErrorMessage error={view.error} />
+                  {sameCommit &&
+                    view.requestedPath !== data?.filePath &&
+                    t("读取 {old} 失败，当前显示 {new} 的内容。", {
+                      old: view.requestedPath ?? "",
+                      new: data?.filePath ?? "",
+                    })}
                   <button onClick={view.retry}>{t("重试")}</button>
                 </div>
               )}
@@ -221,6 +228,13 @@ export function Details({
                   retry={view.retry}
                   commit={data.detail}
                   active={shown}
+                  loading={sameCommit && view.loading && !view.error}
+                  requestKey={view.requestKey}
+                  requestedFile={
+                    view.requestedPath
+                      ? { path: view.requestedPath, mode: "commit" }
+                      : null
+                  }
                   origin={{
                     repoId: project.repoId,
                     path: data.filePath,

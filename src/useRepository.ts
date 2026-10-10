@@ -69,6 +69,7 @@ export function useRepository() {
   const openGate = useRef(new RequestGate()),
     stateGate = useRef(new RequestGate()),
     historyGate = useRef(new RequestGate());
+  const openingTarget = useRef<string | null>(null);
   const recentRevision = useRef(0),
     recentAction = useRef(0),
     recentWriteQueue = useRef<Promise<void>>(Promise.resolve()),
@@ -214,6 +215,22 @@ export function useRepository() {
     ) => {
       hasOpenIntent.current = true;
       setRecentError(null);
+      const targetKey = JSON.stringify([path, view, withinProject]);
+      if (!retryIntent && !recentOpenIntent.current.has(path)) {
+        if (openingTarget.current === targetKey) return;
+        const same =
+          current.current?.snapshot.path === path ||
+          (!withinProject && identityRef.current?.path === path);
+        if (same && !view) {
+          if (openingTarget.current) openGate.current.invalidate();
+          openingTarget.current = null;
+          failedOpen.current = null;
+          setOpeningPath(null);
+          setOpenError(null);
+          return;
+        }
+      }
+      openingTarget.current = targetKey;
       const forgottenForThisOpen = retryIntent ?? new Set<string>();
       recentOpenIntent.current = forgottenForThisOpen;
       const ticket = openGate.current.next();
@@ -353,7 +370,10 @@ export function useRepository() {
       } catch (e) {
         if (openGate.current.accepts(ticket)) setOpenError(errorOf(e));
       } finally {
-        if (openGate.current.accepts(ticket)) setOpeningPath(null);
+        if (openGate.current.accepts(ticket)) {
+          openingTarget.current = null;
+          setOpeningPath(null);
+        }
       }
     },
     [loadHistory],
@@ -364,6 +384,7 @@ export function useRepository() {
       if (!target) return;
       if (path === target.snapshot.path) {
         openGate.current.invalidate();
+        openingTarget.current = null;
         failedOpen.current = null;
         setOpeningPath(null);
         setOpenError(null);
@@ -372,6 +393,7 @@ export function useRepository() {
       const tree = target.snapshot.worktrees.find((item) => item.path === path);
       if (!tree?.available || tree.bare) {
         openGate.current.invalidate();
+        openingTarget.current = null;
         failedOpen.current = null;
         setOpeningPath(null);
         setOpenError({

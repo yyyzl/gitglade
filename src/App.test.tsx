@@ -133,6 +133,35 @@ const resolve = async (index: number, text: string) =>
     }),
   );
 describe("两栏导航与共享差异", () => {
+  it("工作区选择立即响应，右侧到齐前保留旧文件，换文件不重新创建视口", async () => {
+    repo.project = {
+      ...project,
+      snapshot: {
+        ...project.snapshot,
+        files: [
+          { ...project.snapshot.files[0], staged: false },
+          { ...project.snapshot.files[0], path: "B.ts", staged: false },
+        ],
+      },
+    };
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "工作区" }));
+    await resolve(0, "A 内容");
+    const viewport = container.querySelector(".diff-scroll");
+    const next = screen.getByRole("button", { name: "B.ts · 未暂存" });
+    fireEvent.click(next);
+    expect(next.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      container.querySelector(".file-heading-line strong")?.textContent,
+    ).toBe("file.txt");
+    expect(screen.getByText("+A 内容")).toBeTruthy();
+    await resolve(1, "B 内容");
+    expect(
+      container.querySelector(".file-heading-line strong")?.textContent,
+    ).toBe("B.ts");
+    expect(screen.getByText("+B 内容")).toBeTruthy();
+    expect(container.querySelector(".diff-scroll")).toBe(viewport);
+  });
   it("提交文件在左侧，右侧共用对比组件，来源往返保留所选文件", async () => {
     render(<App />);
     const sidebar = screen.getByRole("complementary", { name: "仓库导航" });

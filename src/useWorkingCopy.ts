@@ -31,7 +31,17 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
     error: GitError | null;
     loading: boolean;
     revision: string;
-  }>({ key: "", data: null, error: null, loading: false, revision: "" });
+    repoId: string;
+    file: WorkingFile | null;
+  }>({
+    key: "",
+    data: null,
+    error: null,
+    loading: false,
+    revision: "",
+    repoId: "",
+    file: null,
+  });
   const [retry, setRetry] = useState(0);
   const cache = useRef(new Map<string, Diff>());
   const files = project?.snapshot.files ?? [];
@@ -79,16 +89,20 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
         error: null,
         loading: false,
         revision: project.snapshot.changesRevision,
+        repoId: project.repoId,
+        file,
       });
       return;
     }
     let live = true;
     setResult((old) => ({
       key,
-      data: old.key === key ? old.data : null,
+      data: old.repoId === project.repoId ? old.data : null,
       error: null,
       loading: true,
-      revision: old.key === key ? old.revision : "",
+      revision: old.repoId === project.repoId ? old.revision : "",
+      repoId: project.repoId,
+      file: old.repoId === project.repoId && old.data ? old.file : file,
     }));
     request<Diff>("get_diff", {
       repoId: project.repoId,
@@ -117,6 +131,8 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
             error: null,
             loading: false,
             revision: project.snapshot.changesRevision,
+            repoId: project.repoId,
+            file,
           });
         }
       })
@@ -124,10 +140,12 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
         if (live)
           setResult((old) => ({
             key,
-            data: old.key === key ? old.data : null,
+            data: old.repoId === project.repoId ? old.data : null,
             error: errorOf(e),
             loading: false,
-            revision: old.key === key ? old.revision : "",
+            revision: old.repoId === project.repoId ? old.revision : "",
+            repoId: project.repoId,
+            file: old.repoId === project.repoId && old.data ? old.file : file,
           }));
       });
     return () => {
@@ -143,15 +161,23 @@ export function useWorkingCopy(project: Project | null, active: boolean) {
   ]);
   return {
     file,
+    displayedFile: cached
+      ? file
+      : file && result.repoId === project?.repoId && result.data
+        ? result.file
+        : file,
     requestKey: versionKey,
-    diff: cached ?? (result.key === key ? result.data : null),
+    diff: file
+      ? (cached ?? (result.repoId === project?.repoId ? result.data : null))
+      : null,
     diffRevision: cached
       ? project?.snapshot.changesRevision
-      : result.key === key
+      : result.repoId === project?.repoId
         ? result.revision
         : undefined,
     error: result.key === key ? result.error : null,
-    loading: !cached && result.key === key && result.loading,
+    loading:
+      !!file && active && !cached && (result.key !== key || result.loading),
     choose: (value: WorkingFile) => {
       if (project) {
         choices.current.set(project.repoId, value);

@@ -6,7 +6,7 @@
 
 On macOS, open the DMG and drag oil-git to Applications. On Windows, run the setup executable. Check the release tag and notes for the package’s feature scope. Your computer needs Git, but running the packaged application does not require Node, Rust, or Python. The application detects Git in PATH and common installation locations. The Windows installer can download Microsoft's WebView2 runtime if it is missing.
 
-Use the project button or `⌘ O` / `Ctrl O` to select a repository. Selecting a subdirectory opens its enclosing repository. Recent projects are stored locally, and the last project is restored on restart. Removing a recent item only removes the application's record. It does not delete files or close the current project.
+Use the project button or `⌘ O` / `Ctrl O` to select a repository. Selecting a subdirectory opens its enclosing repository. Recent projects are stored locally, and the last project is restored on restart. Removing a recent item only removes the application's record. It does not delete files or close the current project. Selecting the current project preserves the view; selecting the same pending target does not start another request.
 
 macOS may request access to Desktop or other protected folders. Respond to the system prompt and retry if the initial read times out.
 
@@ -27,6 +27,8 @@ macOS may request access to Desktop or other protected folders. Respond to the s
 In **Branch comparison**, choose a base on the left and a target on the right, optionally swap them, then apply the comparison. The file list shows the target tree relative to the base tree, not changes since their merge base. Remote refs use locally stored records; comparison does not fetch or check out a branch. Selecting a file reuses the right-hand text, media, binary and line-attribution reader.
 
 ## Compare files
+
+File selection responds immediately while the reader retains its previous content. Slower reads show the requested file and a loading indicator; complete results enter with a short transition. Refreshes and repeated selection do not replay it; reduced-motion settings show results directly.
 
 Text wraps by default, with original line numbers and aligned rows in side-by-side view. Text diffs are capped at 240 KB and show when output is truncated. UTF-16 BOM text is decoded for comparison; encoding-only changes remain visible. Line attribution is unavailable when decoded line numbers cannot reliably map to Git's original text.
 
