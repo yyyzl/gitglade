@@ -135,10 +135,10 @@ try {
             ...args,
           ]);
   check("Version and help entry points", () => {
-    report.version = cli(["--version"]);
+    report.version = launcher(["--version"]);
     assert.match(report.version, /^oil-git \d+\.\d+\.\d+/);
     assert.match(cli(["--help"]), /inspect/);
-    assert.equal(launcher(["--version"]), report.version);
+    assert.equal(cli(["--version"]), report.version);
   });
   check("English and Chinese CLI and bundled Skills", () => {
     for (const [locale, file, helpPattern] of [
