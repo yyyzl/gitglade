@@ -13,7 +13,7 @@ import { CopyButton } from "./CopyButton";
 import { DiffView } from "./DiffView";
 import { LineAttribution } from "./LineAttribution";
 import { HistoryGraph } from "./HistoryGraph";
-import { LanguageProvider } from "./i18n";
+import { LanguageProvider, useI18n } from "./i18n";
 import type { Diff, LineOrigin, PreviewSide, Snapshot } from "./types";
 
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
@@ -40,6 +40,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -481,4 +482,79 @@ it("提交树显示作者，复制标题与完整 ID 不选择提交", async () 
   expect(
     screen.queryByRole("button", { name: "复制分支名称：main" }),
   ).toBeNull();
+});
+
+it("每条提交直接显示本机时间，语言切换保留原始日期和分支", () => {
+  const commits = [
+    {
+      hash: "a".repeat(40),
+      author: "Alice",
+      date: new Date(2026, 9, 5, 8, 24, 37).toISOString(),
+      subject: "分支最新提交",
+      parents: ["b".repeat(40)],
+    },
+    {
+      hash: "b".repeat(40),
+      author: "Alice",
+      date: new Date(2025, 0, 2, 0, 15, 12).toISOString(),
+      subject: "没有分支标签的提交",
+      parents: [],
+    },
+    {
+      hash: "c".repeat(40),
+      author: "Alice",
+      date: "10000-01-01T08:00:00+08:00",
+      subject: "平台无法格式化的日期",
+      parents: [],
+    },
+  ];
+  const snapshot = {
+    head: commits[0].hash,
+    refs: [
+      {
+        name: "main",
+        fullName: "refs/heads/main",
+        hash: commits[0].hash,
+        kind: "branch",
+      },
+    ],
+  } as Snapshot;
+  function Harness() {
+    const { setLanguage } = useI18n();
+    return (
+      <>
+        <button onClick={() => setLanguage("en")}>English</button>
+        <button onClick={() => setLanguage("zh-CN")}>简体中文</button>
+        <HistoryGraph
+          commits={commits}
+          snapshot={snapshot}
+          selected={null}
+          onSelect={() => {}}
+          locate={0}
+          resetKey="repo"
+        />
+      </>
+    );
+  }
+  const { container } = render(
+    <LanguageProvider>
+      <Harness />
+    </LanguageProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "简体中文" }));
+  const times = container.querySelectorAll("time");
+  expect(times).toHaveLength(3);
+  expect(times[0].textContent).toBe("2026/10/05 08:24");
+  expect(times[1].textContent).toBe("2025/01/02 00:15");
+  expect(times[2].textContent).toBe(commits[2].date);
+  expect(times[2].title).toContain(commits[2].date);
+  expect(times[0].getAttribute("datetime")).toBe(commits[0].date);
+  expect(times[0].title).toContain("8:24:37");
+  expect(times[0].getAttribute("aria-label")).toBe(times[0].title);
+  fireEvent.click(screen.getByRole("button", { name: "English" }));
+  expect(times[0].textContent).toBe("10/05/2026, 08:24");
+  expect(times[1].textContent).toBe("01/02/2025, 00:15");
+  expect(times[0].title).toContain("Date:");
+  expect(times[0].getAttribute("datetime")).toBe(commits[0].date);
+  expect(screen.getByText("main")).toBeTruthy();
 });

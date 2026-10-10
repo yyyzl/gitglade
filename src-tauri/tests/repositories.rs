@@ -290,6 +290,107 @@ fn active_clean_and_process_filters_are_rejected_before_any_repo_write() {
 
 #[cfg(unix)]
 #[test]
+fn performance_scoped_diff_does_not_visit_other_filtered_files() {
+    for operation in ["clean", "process"] {
+        let f = Fixture::new();
+        f.write("plain.txt", "before\n");
+        f.write("other.dat", "before\n");
+        f.write(".gitattributes", "*.dat filter=review\n");
+        f.commit("test: 创建按文件读取夹具");
+        f.write("plain.txt", "after\n");
+        f.write("other.dat", "after\n");
+        let marker = f._temp.path().join("filter-invoked");
+        let helper = f._temp.path().join("filter.sh");
+        fs::write(
+            &helper,
+            format!(
+                "#!/bin/sh\nprintf ran >> {}\ncat\n",
+                shell_quote(&marker.to_string_lossy())
+            ),
+        )
+        .unwrap();
+        make_executable(&helper);
+        f.cmd(&[
+            "config",
+            &format!("filter.review.{operation}"),
+            helper.to_str().unwrap(),
+        ]);
+        let before = tree_bytes(&f.repo);
+        let diff = f.git.diff(&f.repo, "unstaged", "plain.txt", None).unwrap();
+        assert!(diff.patch.contains("+after"));
+        assert!(!marker.exists());
+        assert_eq!(tree_bytes(&f.repo), before);
+        assert_eq!(
+            f.git
+                .diff(&f.repo, "unstaged", "other.dat", None)
+                .err()
+                .unwrap()
+                .kind,
+            "unsafeFilter"
+        );
+        assert!(!marker.exists());
+        assert_eq!(tree_bytes(&f.repo), before);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn performance_commit_metadata_is_reused_only_for_the_verified_revision() {
+    let f = Fixture::new();
+    f.write("a.txt", "a\n");
+    f.write("b.txt", "b\n");
+    let hash = f.commit("test: 创建提交信息缓存夹具");
+    let log = f._temp.path().join("git-commands");
+    let wrapper = f._temp.path().join("git-wrapper.sh");
+    fs::write(
+        &wrapper,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> {}\nexec {} \"$@\"\n",
+            shell_quote(&log.to_string_lossy()),
+            shell_quote(&f.git.binary.to_string_lossy())
+        ),
+    )
+    .unwrap();
+    make_executable(&wrapper);
+    let git = Git::new(wrapper);
+    let revision = git.snapshot(&f.repo).unwrap().history_revision;
+    let first = git
+        .commit_view_at_revision(&f.repo, &hash, Some("a.txt"), Some(&revision))
+        .unwrap();
+    let second = git
+        .clone()
+        .commit_view_at_revision(&f.repo, &hash, Some("b.txt"), Some(&revision))
+        .unwrap();
+    assert!(first.diff.unwrap().patch.contains("+a"));
+    assert!(second.diff.unwrap().patch.contains("+b"));
+    let metadata_reads = || {
+        fs::read_to_string(&log)
+            .unwrap()
+            .lines()
+            .filter(|line| line.contains(" show -s "))
+            .count()
+    };
+    assert_eq!(
+        metadata_reads(),
+        1,
+        "同一版本内换文件不应重复读取提交元数据"
+    );
+    f.cmd(&["branch", "new-history"]);
+    assert_eq!(
+        git.commit_view_at_revision(&f.repo, &hash, None, Some(&revision))
+            .err()
+            .unwrap()
+            .kind,
+        "staleHistory"
+    );
+    let next = git.snapshot(&f.repo).unwrap().history_revision;
+    git.commit_view_at_revision(&f.repo, &hash, None, Some(&next))
+        .unwrap();
+    assert_eq!(metadata_reads(), 2);
+}
+
+#[cfg(unix)]
+#[test]
 fn unused_global_filter_does_not_block_a_read_only_snapshot() {
     let f = Fixture::new();
     f.write("plain.txt", "plain\n");

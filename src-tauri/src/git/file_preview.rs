@@ -105,6 +105,10 @@ fn read_limit(path: &str, prefix: &[u8], size: u64) -> usize {
         DIFF_LIMIT
     }
 }
+pub(super) fn needs_preview(path: &str, diff: &Diff) -> bool {
+    diff.binary || media_type(path, &[]).is_some() || is_image_path(path)
+}
+
 impl Git {
     fn preview_blob(
         &self,
@@ -175,7 +179,7 @@ impl Git {
         after: Option<GitBlob>,
         diff: &mut Diff,
     ) -> Result<()> {
-        if !diff.binary && media_type(path, &[]).is_none() && !is_image_path(path) {
+        if !needs_preview(path, diff) {
             return Ok(());
         }
         let before = self.preview_blob(repo, path, before)?;
@@ -190,7 +194,7 @@ impl Git {
         before: Option<GitBlob>,
         diff: &mut Diff,
     ) -> Result<()> {
-        if !diff.binary && media_type(path, &[]).is_none() && !is_image_path(path) {
+        if !needs_preview(path, diff) {
             return Ok(());
         }
         let before = self.preview_blob(repo, path, before)?;

@@ -13,7 +13,10 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     process::{Child, Command, ExitStatus, Stdio},
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -49,6 +52,12 @@ impl From<std::io::Error> for Error {
 pub struct Git {
     pub binary: PathBuf,
     lfs_helper: Option<PathBuf>,
+    commit_cache: Arc<Mutex<Option<CachedCommit>>>,
+}
+struct CachedCommit {
+    repo: PathBuf,
+    revision: String,
+    detail: CommitDetail,
 }
 pub struct Output {
     pub bytes: Vec<u8>,
@@ -275,6 +284,7 @@ impl Git {
         Self {
             binary,
             lfs_helper: None,
+            commit_cache: Arc::default(),
         }
     }
 
@@ -282,8 +292,8 @@ impl Git {
     /// Production instances always use the current application executable.
     pub fn with_lfs_helper(binary: PathBuf, helper: PathBuf) -> Self {
         Self {
-            binary,
             lfs_helper: Some(helper),
+            ..Self::new(binary)
         }
     }
 
@@ -722,14 +732,14 @@ impl Git {
     pub fn refs(&self, repo: &Path) -> Result<Vec<Reference>> {
         self.reference_state(repo).map(|(refs, _)| refs)
     }
-    fn history_context(&self, repo: &Path, replace_refs: &str) -> Result<String> {
+    fn history_context(
+        &self,
+        replace_refs: &str,
+        paths: Vec<PathBuf>,
+        replace_setting: &str,
+    ) -> Result<String> {
         // Keep replacement refs out of the visible branch/tag list while still
         // making changes to them invalidate the parsed commit graph.
-        let replace_setting = self.text(
-            repo,
-            &["config", "--bool", "--get", "core.useReplaceRefs"],
-            true,
-        )?;
         let mut digest = Sha256::new();
         digest.update(b"replace-refs\0");
         digest.update(replace_refs.as_bytes());
@@ -739,7 +749,6 @@ impl Git {
         } else {
             replace_setting.as_bytes()
         });
-        let paths = self.git_paths(repo, &["shallow", "info/grafts"])?;
         for (marker, path) in ["shallow", "info/grafts"].iter().zip(paths) {
             digest.update(marker.as_bytes());
             add_history_file_state(&mut digest, &path)?;
@@ -747,9 +756,66 @@ impl Git {
         Ok(format!("{:x}", digest.finalize()))
     }
     fn history_state(&self, repo: &Path) -> Result<(String, Vec<Reference>, String)> {
-        let head = self.text(repo, &["rev-parse", "--verify", "HEAD"], true)?;
-        let (refs, replace_refs) = self.reference_state(repo)?;
-        let context = self.history_context(repo, &replace_refs)?;
+        let (output, (refs, replace_refs), replace_setting) =
+            thread::scope(|scope| -> Result<_> {
+                let references = scope.spawn(|| self.reference_state(repo));
+                let setting = scope.spawn(|| {
+                    self.text(
+                        repo,
+                        &["config", "--bool", "--get", "core.useReplaceRefs"],
+                        true,
+                    )
+                });
+                let output = self.run(
+                    repo,
+                    &[
+                        "rev-parse",
+                        "--git-path",
+                        "shallow",
+                        "--git-path",
+                        "info/grafts",
+                        "--verify",
+                        "HEAD",
+                    ],
+                    READ_LIMIT,
+                    true,
+                );
+                let references = references
+                    .join()
+                    .map_err(|_| Error::new("read", "Git 引用读取失败。"));
+                let setting = setting
+                    .join()
+                    .map_err(|_| Error::new("read", "Git 历史配置读取失败。"));
+                Ok((output?, references??, setting??))
+            })?;
+        if output.truncated {
+            return Err(Error::new("tooLarge", "Git 历史元数据路径过大。"));
+        }
+        let raw = String::from_utf8_lossy(&output.bytes);
+        let mut lines = raw.lines();
+        let paths = (0..2)
+            .map(|_| {
+                let path = PathBuf::from(
+                    lines
+                        .next()
+                        .ok_or_else(|| Error::new("read", "Git 元数据路径读取失败。"))?,
+                );
+                Ok(if path.is_absolute() {
+                    path
+                } else {
+                    repo.join(path)
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let head = if output.ok {
+            lines
+                .next()
+                .ok_or_else(|| Error::new("read", "HEAD 读取失败。"))?
+                .to_owned()
+        } else {
+            String::new()
+        };
+        let context = self.history_context(&replace_refs, paths, &replace_setting)?;
         let revision = history_id(&head, &refs, &context);
         Ok((head, refs, revision))
     }
@@ -783,8 +849,13 @@ impl Git {
         }
         Ok(())
     }
-    fn tracked_index_entries(&self, repo: &Path) -> Result<Vec<IndexEntry>> {
-        let index = self.run(repo, &["ls-files", "--stage", "-z"], READ_LIMIT, false)?;
+    fn tracked_index_entries(&self, repo: &Path, path: Option<&str>) -> Result<Vec<IndexEntry>> {
+        let literal = path.map(|path| format!(":(literal){path}"));
+        let mut args = vec!["ls-files", "--stage", "-z"];
+        if let Some(literal) = &literal {
+            args.extend(["--", literal]);
+        }
+        let index = self.run(repo, &args, READ_LIMIT, false)?;
         if index.truncated {
             return Err(Error::new("tooLarge", "暂存区过大，无法完整读取。"));
         }
@@ -803,15 +874,16 @@ impl Git {
             })
             .collect())
     }
-    fn reject_active_filters(&self, repo: &Path) -> Result<()> {
+    fn reject_active_filters(&self, repo: &Path, path: Option<&str>) -> Result<()> {
         let mut visited = HashSet::new();
-        self.reject_active_filters_inner(repo, &mut visited, 0)
+        self.reject_active_filters_inner(repo, &mut visited, 0, path)
     }
     fn reject_active_filters_inner(
         &self,
         repo: &Path,
         visited: &mut HashSet<PathBuf>,
         depth: usize,
+        path: Option<&str>,
     ) -> Result<()> {
         if depth > 32 || visited.len() > 2048 {
             return Err(Error::new(
@@ -824,7 +896,7 @@ impl Git {
             return Ok(());
         }
         self.reject_partial_clone(&canonical_repo)?;
-        let entries = self.tracked_index_entries(&canonical_repo)?;
+        let entries = self.tracked_index_entries(&canonical_repo, path)?;
         let mut paths = Vec::new();
         let mut gitlinks = Vec::new();
         for entry in &entries {
@@ -944,7 +1016,7 @@ impl Git {
                 String::from_utf8_lossy(&root.bytes).trim_end_matches(['\r', '\n']),
             )?;
             if root == candidate_root {
-                self.reject_active_filters_inner(&root, visited, depth + 1)?;
+                self.reject_active_filters_inner(&root, visited, depth + 1, None)?;
             }
         }
         Ok(())
@@ -1357,15 +1429,24 @@ impl Git {
             } else {
                 (path, true, path, false, None)
             };
-        let has_head = self
-            .run(repo, &["rev-parse", "--verify", "HEAD"], 256, true)?
-            .ok;
-        let before_lfs = if let Some(revision) = before_revision.filter(|_| has_head) {
-            self.path_uses_lfs(repo, before_path, Some(revision), false)?
-        } else {
-            self.path_uses_lfs(repo, before_path, None, before_cached)?
-        };
-        let after_lfs = self.path_uses_lfs(repo, after_path, None, after_cached)?;
+        let has_head = mode == "staged"
+            && self
+                .run(repo, &["rev-parse", "--verify", "HEAD"], 256, true)?
+                .ok;
+        let (before_lfs, after_lfs) = thread::scope(|scope| -> Result<_> {
+            let before = scope.spawn(|| {
+                if let Some(revision) = before_revision.filter(|_| has_head) {
+                    self.path_uses_lfs(repo, before_path, Some(revision), false)
+                } else {
+                    self.path_uses_lfs(repo, before_path, None, before_cached)
+                }
+            });
+            let after = self.path_uses_lfs(repo, after_path, None, after_cached);
+            let before = before
+                .join()
+                .map_err(|_| Error::new("read", "Git 原文件属性读取失败。"));
+            Ok((before??, after?))
+        })?;
         if !before_lfs && !after_lfs {
             return Ok(None);
         }
@@ -1408,11 +1489,17 @@ impl Git {
         path: &str,
     ) -> Result<Option<LfsDiff>> {
         let before_path = old_path.unwrap_or(path);
-        let before_lfs = match parent {
-            Some(parent) => self.path_uses_lfs(repo, before_path, Some(parent), false)?,
-            None => false,
-        };
-        let after_lfs = self.path_uses_lfs(repo, path, Some(revision), false)?;
+        let (before_lfs, after_lfs) = thread::scope(|scope| -> Result<_> {
+            let before = scope.spawn(|| match parent {
+                Some(parent) => self.path_uses_lfs(repo, before_path, Some(parent), false),
+                None => Ok(false),
+            });
+            let after = self.path_uses_lfs(repo, path, Some(revision), false);
+            let before = before
+                .join()
+                .map_err(|_| Error::new("read", "Git 原文件属性读取失败。"));
+            Ok((before??, after?))
+        })?;
         if !before_lfs && !after_lfs {
             return Ok(None);
         }
@@ -1427,20 +1514,24 @@ impl Git {
     }
     pub fn files(&self, repo: &Path) -> Result<Vec<FileState>> {
         self.reject_partial_clone(repo)?;
-        self.files_with_status_revision(repo)
+        self.files_with_status_revision(repo, None)
             .map(|(files, _)| files)
     }
-    fn files_with_status_revision(&self, repo: &Path) -> Result<(Vec<FileState>, [u8; 32])> {
+    fn files_with_status_revision(
+        &self,
+        repo: &Path,
+        path: Option<&str>,
+    ) -> Result<(Vec<FileState>, [u8; 32])> {
         // `status` can invoke an active clean/process conversion driver while
         // comparing tracked worktree bytes. Verify effective attributes first;
         // an unused global filter config remains harmless.
-        self.reject_active_filters(repo)?;
-        let raw = self.run(
-            repo,
-            &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-            READ_LIMIT,
-            false,
-        )?;
+        self.reject_active_filters(repo, path)?;
+        let literal = path.map(|path| format!(":(literal){path}"));
+        let mut args = vec!["status", "--porcelain=v1", "-z", "--untracked-files=all"];
+        if let Some(literal) = &literal {
+            args.extend(["--", literal]);
+        }
+        let raw = self.run(repo, &args, READ_LIMIT, false)?;
         if raw.truncated {
             return Err(Error::new("tooLarge", "变更文件过多，无法完整读取。"));
         }
@@ -1535,7 +1626,7 @@ impl Git {
             } else {
                 digest.update(b"unborn\0");
             }
-            let (files, status_revision) = self.files_with_status_revision(&child)?;
+            let (files, status_revision) = self.files_with_status_revision(&child, None)?;
             digest.update(b"submodule-status\0");
             digest.update(status_revision);
             digest.update(b"submodule-dirty-path-metadata\0");
@@ -1641,7 +1732,7 @@ impl Git {
         for _ in 0..2 {
             let (head, refs, history_revision) = self.history_state(repo)?;
             let branch = self.text(repo, &["symbolic-ref", "--quiet", "--short", "HEAD"], true)?;
-            let (files, status_revision) = self.files_with_status_revision(repo)?;
+            let (files, status_revision) = self.files_with_status_revision(repo, None)?;
             let fallback_nonce = SNAPSHOT_FALLBACK_NONCE.fetch_add(1, Ordering::Relaxed);
             let index_revision = self.index_revision(repo, fallback_nonce)?;
             let working_revision = working_files_revision(repo, &files, fallback_nonce);
@@ -1705,7 +1796,8 @@ impl Git {
             // status and the index are separate Git reads. Fence both sides, and
             // sample changed-file metadata again, so a concurrent `git add` or
             // edit cannot produce a mixed files/changesRevision snapshot.
-            let (after_files, after_status_revision) = self.files_with_status_revision(repo)?;
+            let (after_files, after_status_revision) =
+                self.files_with_status_revision(repo, None)?;
             let after_index_revision = self.index_revision(repo, fallback_nonce)?;
             let after_working_revision = working_files_revision(repo, &after_files, fallback_nonce);
             let (_, _, after_history_revision) = self.history_state(repo)?;
@@ -1823,8 +1915,9 @@ impl Git {
     ) -> Result<CommitDetail> {
         self.reject_partial_clone(repo)?;
         let expected = self.check_expected_history(repo, expected_history_revision)?;
-        let detail = self.commit_inner(repo, value)?;
+        let detail = self.commit_for_revision(repo, value, expected.as_deref())?;
         self.verify_expected_history_still_current(repo, expected.as_deref())?;
+        self.cache_commit(repo, expected.as_deref(), &detail);
         Ok(detail)
     }
     pub fn commit_view_at_revision(
@@ -1836,7 +1929,7 @@ impl Git {
     ) -> Result<CommitView> {
         self.reject_partial_clone(repo)?;
         let expected = self.check_expected_history(repo, expected_history_revision)?;
-        let detail = self.commit_inner(repo, value)?;
+        let detail = self.commit_for_revision(repo, value, expected.as_deref())?;
         let file_path = match path {
             Some(path) => {
                 validate_relative(path)?;
@@ -1852,11 +1945,42 @@ impl Git {
             .map(|path| self.commit_diff_with_lfs(repo, &detail, path))
             .transpose()?;
         self.verify_expected_history_still_current(repo, expected.as_deref())?;
+        self.cache_commit(repo, expected.as_deref(), &detail);
         Ok(CommitView {
             detail,
             file_path,
             diff,
         })
+    }
+    fn commit_for_revision(
+        &self,
+        repo: &Path,
+        value: &str,
+        revision: Option<&str>,
+    ) -> Result<CommitDetail> {
+        if let Some(revision) = revision {
+            if let Some(cached) = self.commit_cache.lock().unwrap().as_ref().filter(|cached| {
+                cached.repo == repo
+                    && cached.revision == revision
+                    && cached.detail.commit.hash == value
+            }) {
+                return Ok(cached.detail.clone());
+            }
+        }
+        self.commit_inner(repo, value)
+    }
+    fn cache_commit(&self, repo: &Path, revision: Option<&str>, detail: &CommitDetail) {
+        if let Some(revision) = revision {
+            let entry = serde_json::to_vec(detail)
+                .ok()
+                .filter(|bytes| bytes.len() <= 1024 * 1024)
+                .map(|_| CachedCommit {
+                    repo: repo.to_owned(),
+                    revision: revision.to_owned(),
+                    detail: detail.clone(),
+                });
+            *self.commit_cache.lock().unwrap() = entry;
+        }
     }
     fn commit_inner(&self, repo: &Path, value: &str) -> Result<CommitDetail> {
         Self::validate_commit_id(value)?;
@@ -1997,7 +2121,7 @@ impl Git {
             }
             Err(error) => return Err(error),
         };
-        if diff.lfs.is_none() && diff.note.is_none() {
+        if diff.lfs.is_none() && diff.note.is_none() && file_preview::needs_preview(path, &diff) {
             let before = match detail.commit.parents.first() {
                 Some(parent) => {
                     self.tree_blob(repo, parent, file.old_path.as_deref().unwrap_or(path))?
@@ -2063,7 +2187,14 @@ impl Git {
         };
         let mut owned_paths = vec![literal];
         let output = if ["staged", "unstaged", "conflict"].contains(&mode) {
-            let files = self.files(repo)?;
+            let (mut files, _) = self.files_with_status_revision(repo, Some(path))?;
+            // shortcut: 按路径的 status 将暂存重命名视为新增，保留完整查询恢复来源；有按路径重命名查询后再收窄。
+            if files
+                .iter()
+                .any(|file| file.path == path && file.staged && file.xy.starts_with('A'))
+            {
+                files = self.files(repo)?;
+            }
             let Some(file) = files.iter().find(|f| f.path == path).cloned() else {
                 result.note = Some("该文件已没有待提交修改。".into());
                 return Ok(result);
@@ -2146,7 +2277,7 @@ impl Git {
             result.patch = String::from_utf8_lossy(&output.bytes).into();
             result.binary = is_binary_patch(&result.patch);
             result.truncated |= output.truncated;
-            if result.lfs.is_none() {
+            if result.lfs.is_none() && file_preview::needs_preview(path, &result) {
                 if mode == "conflict" && file.conflict {
                     let before = self.index_stage_blob(repo, path, "2")?;
                     let after = self.index_stage_blob(repo, path, "3")?;
@@ -2718,4 +2849,49 @@ pub struct ConflictBlock {
 pub struct ConflictLine {
     pub line: usize,
     pub text: String,
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    #[test]
+    fn commit_cache_is_bounded_and_bound_to_repository_and_revision() {
+        let temp = tempfile::tempdir().unwrap();
+        let git = Git::new(temp.path().join("missing-git"));
+        let repo = temp.path().join("repo");
+        let other = temp.path().join("other");
+        let hash = "a".repeat(40);
+        let mut detail = CommitDetail {
+            commit: Commit {
+                hash: hash.clone(),
+                parents: vec![],
+                author: String::new(),
+                author_email: String::new(),
+                committer: String::new(),
+                committer_email: String::new(),
+                date: String::new(),
+                subject: "cached".into(),
+            },
+            files: vec![],
+            comparison: String::new(),
+        };
+        git.cache_commit(&repo, Some("v1"), &detail);
+        assert_eq!(
+            git.clone()
+                .commit_for_revision(&repo, &hash, Some("v1"))
+                .unwrap()
+                .commit
+                .subject,
+            "cached"
+        );
+        assert!(git.commit_for_revision(&other, &hash, Some("v1")).is_err());
+        assert!(git.commit_for_revision(&repo, &hash, Some("v2")).is_err());
+        assert!(git.commit_for_revision(&repo, &hash, None).is_err());
+        git.cache_commit(&other, Some("v1"), &detail);
+        assert!(git.commit_for_revision(&repo, &hash, Some("v1")).is_err());
+        detail.commit.subject = "a".repeat(1024 * 1024);
+        git.cache_commit(&other, Some("v1"), &detail);
+        assert!(git.commit_cache.lock().unwrap().is_none());
+    }
 }

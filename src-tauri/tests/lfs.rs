@@ -29,8 +29,12 @@ impl Fixture {
         let helper = helper_dir.join("oil-git-lfs-test.exe");
         #[cfg(not(windows))]
         let helper = helper_dir.join("oil-git-lfs-test");
+        #[cfg(target_os = "macos")]
+        // 使用可信构建产物的别名避开副本冷启动校验，仍验证中文与空格路径。
+        std::os::unix::fs::symlink(source, &helper).unwrap();
+        #[cfg(not(target_os = "macos"))]
         fs::copy(source, &helper).unwrap();
-        #[cfg(unix)]
+        #[cfg(all(unix, not(target_os = "macos")))]
         {
             use std::os::unix::fs::PermissionsExt;
             let mut permissions = fs::metadata(&helper).unwrap().permissions();
