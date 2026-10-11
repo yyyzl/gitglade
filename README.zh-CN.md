@@ -1,24 +1,22 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="oil-git 是本地 Git 可视化桌面工具，帮助你看清项目发生了什么变化。" />
+  <img src="./assets/readme/hero.svg" width="100%" alt="GitGlade 是本地 Git 可视化桌面工具，帮助你看清项目发生了什么变化。" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/yyyzl/oil-git/actions/workflows/build.yml"><img src="https://github.com/yyyzl/oil-git/actions/workflows/build.yml/badge.svg" alt="桌面端构建与测试状态" /></a>
+  <a href="https://github.com/yyyzl/gitglade/actions/workflows/build.yml"><img src="https://github.com/yyyzl/gitglade/actions/workflows/build.yml/badge.svg" alt="桌面端构建与测试状态" /></a>
   · <a href="LICENSE">MIT</a>
-  · <a href="https://github.com/yyyzl/oil-git/releases/latest">下载</a>
+  · <a href="https://yyyzl.github.io/gitglade/">下载</a>
   · <a href="docs/zh-CN/usage.md">使用说明</a>
   · <a href="docs/zh-CN/contributing.md">贡献指南</a>
-  · <a href="skills/oil-git/SKILL.zh-CN.md">Agent Skill</a>
+  · <a href="skills/gitglade/SKILL.zh-CN.md">Agent Skill</a>
   · <a href="README.md">English</a>
 </p>
 
-**oil-git 是一个本地 Git 仓库可视化桌面工具。** 打开项目即可查看当前分支、工作区更改、提交历史和文件差异。你继续在编辑器、终端或 Agent 中使用 Git，oil-git 会跟随真实仓库的变化更新。
-
-本仓库是 [oil-oil/oil-git](https://github.com/oil-oil/oil-git) 的 Fork，包含本地改动和 CI 兼容性修复。上方构建徽章和下载入口均指向本 Fork。
+**GitGlade 是一个本地 Git 仓库可视化桌面工具。** 打开项目即可查看当前分支、工作区更改、提交历史和文件差异。你继续在编辑器、终端或 Agent 中使用 Git，GitGlade 会跟随真实仓库的变化更新。
 
 ## 可以查看什么
 
-| 你想确认           | oil-git 展示什么                                                    |
+| 你想确认           | GitGlade 展示什么                                                   |
 | ------------------ | ------------------------------------------------------------------- |
 | 当前在哪个分支     | 提交图、父子关系、本地分支、标签与 `HEAD`                           |
 | 项目改了哪些内容   | 按合并冲突、已暂存更改和工作区更改分组的文件                        |
@@ -30,27 +28,21 @@
 
 界面支持英文和简体中文。首次启动时根据系统语言选择，之后会记住你的手动设置。也支持深色、浅色和绿色主题。
 
-## 界面预览
-
-<p align="center">
-  <img src="./assets/readme/app-zh-CN.jpg" width="100%" alt="oil-git 深色界面中的本地 Git 仓库。" />
-</p>
-
 切换界面语言不会翻译仓库名称、分支、提交信息、路径或作者等 Git 原始内容。
 
 ## 安装
 
-从[本 Fork 的 GitHub Releases](https://github.com/yyyzl/oil-git/releases/latest) 下载已验证的安装包：
+从[GitGlade GitHub Releases](https://github.com/yyyzl/gitglade/releases/latest) 下载已验证的安装包：
 
-- **Windows x64：** `oil-git_*_x64-setup.exe`。
-- **macOS（Apple Silicon 和 Intel）：** `oil-git_*_universal.dmg`。
+- **Windows x64：** `GitGlade_*_x64-setup.exe`。
+- **macOS（Apple Silicon 和 Intel）：** `GitGlade_*_universal.dmg`。
 
 Release 附件与临时 CI 产物独立，不受 CI 的 14 天保留期限限制；除非删除 Release 或附件，否则可持续下载。对应源码版本见发布说明。
 
-尚未发布的提交可通过 [GitHub Actions 构建产物](https://github.com/yyyzl/oil-git/actions/workflows/build.yml) 下载：
+尚未发布的提交可通过 [GitHub Actions 构建产物](https://github.com/yyyzl/gitglade/actions/workflows/build.yml) 下载：
 
 1. 打开 **Desktop CI**，选择 `main` 分支上成功的构建，确认提交对应你需要的版本。
-2. 在页面的 **Artifacts** 区域，Windows x64 下载 `windows-x64-test`；macOS（Apple Silicon 和 Intel）下载 `mac-universal-test`。下载构建产物需要登录 GitHub。
+2. 在页面的 **Artifacts** 区域，Windows x64 下载 `installers-windows-x64`；macOS（Apple Silicon 和 Intel）下载 `installers-macos-universal`。下载构建产物需要登录 GitHub。
 3. 解压下载的 ZIP，运行 Windows 的 `*setup.exe` 安装器，或打开 macOS 的 `.dmg`。
 
 构建产物保留 **14 天**。若已过期，可通过 **Run workflow** 手动触发新构建，或[从源码构建](docs/zh-CN/development.md)。推送代码和提交 Pull Request 会自动触发检查；全部检查通过后，工作流构建两个平台的安装包，并在 Windows 和两种 macOS 架构上验证安装后的 CLI。失败的构建可能不会生成安装包。
@@ -61,17 +53,17 @@ Release 附件与临时 CI 产物独立，不受 CI 的 14 天保留期限限制
 
 ## Agent 与 CLI
 
-安装包包含 CLI 和 [oil-git Agent Skill](skills/oil-git/SKILL.zh-CN.md)。CLI 可以在现有应用窗口打开项目，或输出只读 JSON 快照：
+安装包包含 CLI 和 [GitGlade Agent Skill](skills/gitglade/SKILL.zh-CN.md)。CLI 可以在现有应用窗口打开项目，或输出只读 JSON 快照：
 
 ```sh
-oil-git open . --view changes
-oil-git open . --view history
-oil-git inspect . --json
-oil-git skill --path
-oil-git --lang zh-CN --help
+gitglade open . --view changes
+gitglade open . --view history
+gitglade inspect . --json
+gitglade skill --path
+gitglade --lang zh-CN --help
 ```
 
-可对 CLI 命令使用 `--lang en` 或 `--lang zh-CN` 指定语言；不指定时每次读取环境变量中的区域设置，未设置时使用英文；这与界面中保存的语言偏好独立。`inspect` 只读取本地仓库，不会打开窗口。Skill 随安装包提供，安装 oil-git 不会修改 Agent 宿主设置。启动器路径和接入方式见 [CLI 使用说明](docs/zh-CN/usage.md#cli-与-ai-agent)。
+可对 CLI 命令使用 `--lang en` 或 `--lang zh-CN` 指定语言；不指定时每次读取环境变量中的区域设置，未设置时使用英文；这与界面中保存的语言偏好独立。`inspect` 只读取本地仓库，不会打开窗口。Skill 随安装包提供，安装 GitGlade 不会修改 Agent 宿主设置。启动器路径和接入方式见 [CLI 使用说明](docs/zh-CN/usage.md#cli-与-ai-agent)。
 
 ## 仓库访问边界
 
@@ -85,7 +77,7 @@ oil-git --lang zh-CN --help
 
 ## 开发
 
-oil-git 使用 Tauri 2、React、TypeScript 和 Rust。Rust 通过系统 Git 读取仓库，打包后的应用不启动本地 HTTP 服务。
+GitGlade 使用 Tauri 2、React、TypeScript 和 Rust。Rust 通过系统 Git 读取仓库，打包后的应用不启动本地 HTTP 服务。
 
 ```sh
 npm ci
@@ -101,3 +93,11 @@ npm run desktop
 ## 许可证
 
 [MIT](LICENSE)。文件类型图标来自 [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)，其他随附素材见[第三方声明](docs/zh-CN/third-party-notices.md)。
+
+## 致谢
+
+GitGlade 独立维护，源自 [oil-oil/oil-git](https://github.com/oil-oil/oil-git)。保留原始 MIT 版权与第三方许可声明。
+
+### 手动触发发布
+
+也可在 `main` 上选择 **Desktop CI → Run workflow**，将 `release_version` 填为 `v0.1.1`（或应用当前的准确版本）。留空只运行 CI，不发布。非空版本必须与所有应用／包版本一致，并通过完整检查、打包与安装后验证，才会在已测试提交上原子创建新标签并发布安装包。手动路径不会复用或覆盖现有标签、Release。若创建标签后发布失败，应先检查原因，不要盲目删除或移动标签重试。

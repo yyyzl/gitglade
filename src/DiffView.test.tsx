@@ -107,7 +107,7 @@ it("有原始差异时也呈现读取范围的限制说明", () => {
   expect(screen.getByText("Git 原始差异").closest("details")!.open).toBe(false);
 });
 it("二进制历史差异仍显示未确认 LFS 警告和原始诊断", () => {
-  localStorage.setItem("oil-git.language", "en");
+  localStorage.setItem("gitglade.language", "en");
   const note =
     "当前 Git 无法读取历史属性，以下是 Git 原始差异，未确认 LFS 状态。";
   render(

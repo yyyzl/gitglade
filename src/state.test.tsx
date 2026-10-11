@@ -297,7 +297,9 @@ describe("真实组件的请求顺序", () => {
       remember: false,
     });
     expect(result.current.recents).toEqual([{ path: "/root", name: "/root" }]);
-    expect(localStorage.getItem("oil-git.worktree./root")).toBe("/trees/topic");
+    expect(localStorage.getItem("gitglade.worktree./root")).toBe(
+      "/trees/topic",
+    );
     act(() => {
       void result.current.openPath("/root");
     });
@@ -328,7 +330,7 @@ describe("真实组件的请求顺序", () => {
     await fail(take("open_repository"), { kind: "io", message: "目录不可读" });
     expect(result.current.project?.repoId).toBe("/root");
     expect(result.current.identity?.path).toBe("/root");
-    expect(localStorage.getItem("oil-git.worktree./root")).toBe("/root");
+    expect(localStorage.getItem("gitglade.worktree./root")).toBe("/root");
     act(() => result.current.retryError());
     const retry = take("open_repository");
     expect(retry.args.path).toBe("/trees/topic");
@@ -364,7 +366,7 @@ describe("真实组件的请求顺序", () => {
   });
 
   it("再次打开项目恢复上次工作树，记录仍属于项目目录", async () => {
-    localStorage.setItem("oil-git.worktree./root", "/trees/topic");
+    localStorage.setItem("gitglade.worktree./root", "/trees/topic");
     const { result } = renderHook(() => useRepository());
     await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
     act(() => {
@@ -388,7 +390,7 @@ describe("真实组件的请求顺序", () => {
   });
 
   it("显式 CLI 目录优先于上次工作树，无效恢复目录回退项目", async () => {
-    localStorage.setItem("oil-git.worktree./root", "/trees/topic");
+    localStorage.setItem("gitglade.worktree./root", "/trees/topic");
     const { result } = renderHook(() => useRepository());
     await waitFor(() => expect(result.current.gitStatus.version).toBeTruthy());
     act(() => {
@@ -399,7 +401,7 @@ describe("真实组件的请求顺序", () => {
     expect(queue.some((item) => item.command === "open_repository")).toBe(
       false,
     );
-    localStorage.setItem("oil-git.worktree./root", "/missing");
+    localStorage.setItem("gitglade.worktree./root", "/missing");
     act(() => {
       void result.current.openPath("/other");
     });

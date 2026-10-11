@@ -309,8 +309,8 @@ const en: Record<string, Translation> = {
   "请先安装 Git 并重新检测。": "Install Git, then check again.",
   "项目已关闭，请重新打开。": "The project is closed. Open it again.",
   "最近项目路径无效。": "The recent project path is invalid.",
-  "请在 oil-git 桌面应用中打开。本地仓库读取需要桌面环境。":
-    "Open this in the oil-git desktop app. Reading local repositories requires the desktop environment.",
+  "请在 GitGlade 桌面应用中打开。本地仓库读取需要桌面环境。":
+    "Open this in the GitGlade desktop app. Reading local repositories requires the desktop environment.",
   "这个项目目录不存在或无法访问。":
     "This project directory does not exist or cannot be accessed.",
   "第一版暂不支持裸仓库，请选择带工作目录的 Git 项目。":
@@ -382,8 +382,8 @@ const en: Record<string, Translation> = {
   "无法监听仓库变化。": "Could not watch for repository changes.",
   "Git 读取请求无效。": "The Git read request is invalid.",
   "文件系统读取失败。": "The file system read failed.",
-  "命令参数无效。运行 oil-git --help 查看用法。":
-    "Invalid command arguments. Run `oil-git --help` for usage.",
+  "命令参数无效。运行 gitglade --help 查看用法。":
+    "Invalid command arguments. Run `gitglade --help` for usage.",
   "Git 读取失败。": "Git could not read the requested data.",
   "无法启动 Git。请检查 Git 安装并重试。":
     "Could not start Git. Check the Git installation and try again.",
@@ -425,7 +425,7 @@ export function detectLanguage(locale?: string | null): Language {
 
 export function loadLanguage(): Language {
   try {
-    const saved = localStorage.getItem("oil-git.language");
+    const saved = localStorage.getItem("gitglade.language");
     if (saved === "en" || saved === "zh-CN") return saved;
   } catch {}
   return detectLanguage(
@@ -464,8 +464,8 @@ const errorMessages: Record<string, string> = {
   updateStale: "更新条件已变化，请重新检查。",
   updateFailed: "无法确认更新结果，请检查仓库状态。",
   updateFilter: "本次更新需要内容过滤器，请在 Git 工具中更新。",
-  desktopRequired: "请在 oil-git 桌面应用中打开。本地仓库读取需要桌面环境。",
-  arguments: "命令参数无效。运行 oil-git --help 查看用法。",
+  desktopRequired: "请在 GitGlade 桌面应用中打开。本地仓库读取需要桌面环境。",
+  arguments: "命令参数无效。运行 gitglade --help 查看用法。",
   bare: "裸仓库暂不支持。请打开带工作目录的 Git 项目。",
   binary: "此文件不能按 Git 文本行查询作者。",
   changed: "文件在读取期间发生变化，请重试。",
@@ -546,7 +546,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(loadLanguage);
   const setLanguage = (value: Language) => {
     try {
-      localStorage.setItem("oil-git.language", value);
+      localStorage.setItem("gitglade.language", value);
     } catch {}
     setLanguageState(value);
   };

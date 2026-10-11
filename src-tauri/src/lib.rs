@@ -1,3 +1,4 @@
+mod brand_storage;
 pub mod git;
 pub mod lfs;
 use git::{Error, Git, Result};
@@ -38,7 +39,7 @@ fn parse_launch(args: &[String]) -> Result<Option<LaunchRequest>> {
     if args[0] != "open" || args.len() < 2 {
         return Err(Error::new(
             "arguments",
-            "用法：oil-git open <项目路径> [--view changes|history]",
+            "用法：gitglade open <项目路径> [--view changes|history]",
         ));
     }
     let view = if args.len() == 2 {
@@ -109,7 +110,7 @@ fn cli_error(error: &Error, language: CliLanguage) -> String {
         return error.message.clone();
     }
     match error.message_key.as_str() {
-        "arguments" => "Invalid command arguments. Run `oil-git --help` for usage.".into(),
+        "arguments" => "Invalid command arguments. Run `gitglade --help` for usage.".into(),
         "bare" => "Bare repositories are not supported. Open a Git project with a working tree.".into(),
         "binary" => "Line attribution is unavailable for this file.".into(),
         "changed" => "The file changed while it was being read. Try again.".into(),
@@ -175,17 +176,17 @@ fn installed_skill_path(language: CliLanguage) -> PathBuf {
         #[cfg(target_os = "macos")]
         let resource = exe.parent().and_then(|p| p.parent()).map(|p| {
             p.join(if language == CliLanguage::Chinese {
-                "Resources/skills/oil-git/SKILL.zh-CN.md"
+                "Resources/skills/gitglade/SKILL.zh-CN.md"
             } else {
-                "Resources/skills/oil-git/SKILL.md"
+                "Resources/skills/gitglade/SKILL.md"
             })
         });
         #[cfg(not(target_os = "macos"))]
         let resource = exe.parent().map(|p| {
             p.join(if language == CliLanguage::Chinese {
-                "skills/oil-git/SKILL.zh-CN.md"
+                "skills/gitglade/SKILL.zh-CN.md"
             } else {
-                "skills/oil-git/SKILL.md"
+                "skills/gitglade/SKILL.md"
             })
         });
         if let Some(path) = resource {
@@ -195,9 +196,9 @@ fn installed_skill_path(language: CliLanguage) -> PathBuf {
         }
     }
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(if language == CliLanguage::Chinese {
-        "../skills/oil-git/SKILL.zh-CN.md"
+        "../skills/gitglade/SKILL.zh-CN.md"
     } else {
-        "../skills/oil-git/SKILL.md"
+        "../skills/gitglade/SKILL.md"
     })
 }
 #[derive(Clone, Serialize, Deserialize)]
@@ -233,11 +234,21 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'sta
         .map_err(|e| Error::new("read", e.to_string()))?
 }
 fn recent_path(app: &tauri::AppHandle) -> Result<PathBuf> {
-    Ok(app
+    let file = app
         .path()
         .app_config_dir()
         .map_err(|e| Error::new("config", e.to_string()))?
-        .join("recent.json"))
+        .join("recent.json");
+    let legacy = app
+        .path()
+        .config_dir()
+        .map_err(|e| Error::new("config", e.to_string()))?
+        .join("org.oiloil.oilgit")
+        .join("recent.json");
+    if let Err(error) = brand_storage::migrate_recent_file(&legacy, &file) {
+        eprintln!("gitglade: could not migrate legacy recent projects: {error}");
+    }
+    Ok(file)
 }
 fn read_recents(app: &tauri::AppHandle) -> Vec<Recent> {
     recent_path(app)
@@ -579,7 +590,7 @@ pub fn run() {
         let status = if raw_args.len() == 1 {
             lfs::run_clean()
         } else {
-            eprintln!("oil-git: invalid hidden LFS clean arguments");
+            eprintln!("gitglade: invalid hidden LFS clean arguments");
             2
         };
         std::process::exit(status);
@@ -591,7 +602,7 @@ pub fn run() {
         let status = if raw_args.len() == 1 {
             lfs::run_filter_process()
         } else {
-            eprintln!("oil-git: invalid hidden LFS filter-process arguments");
+            eprintln!("gitglade: invalid hidden LFS filter-process arguments");
             2
         };
         std::process::exit(status);
@@ -607,30 +618,30 @@ pub fn run() {
     }
     if args.first().is_some_and(|a| a == "--help" || a == "-h") {
         if language == CliLanguage::Chinese {
-            println!("oil-git 本地 Git 查看工具\n\n用法：\n打开：oil-git open <项目路径> [--view changes|history]\n读取：oil-git inspect <项目路径> --json\nSkill：oil-git skill [--path]\n语言：oil-git --lang en|zh-CN <命令>\n无参数启动桌面界面。");
+            println!("GitGlade 本地 Git 查看工具\n\n用法：\n打开：gitglade open <项目路径> [--view changes|history]\n读取：gitglade inspect <项目路径> --json\nSkill：gitglade skill [--path]\n语言：gitglade --lang en|zh-CN <命令>\n无参数启动桌面界面。");
         } else {
-            println!("oil-git local Git viewer\n\nUsage:\nOpen: oil-git open <project-path> [--view changes|history]\nInspect: oil-git inspect <project-path> --json\nSkill: oil-git skill [--path]\nLanguage: oil-git --lang en|zh-CN <command>\nRun without arguments to launch the desktop app.");
+            println!("GitGlade local Git viewer\n\nUsage:\nOpen: gitglade open <project-path> [--view changes|history]\nInspect: gitglade inspect <project-path> --json\nSkill: gitglade skill [--path]\nLanguage: gitglade --lang en|zh-CN <command>\nRun without arguments to launch the desktop app.");
         }
         return;
     }
     if args.first().is_some_and(|a| a == "--version") {
-        println!("oil-git {}", env!("CARGO_PKG_VERSION"));
+        println!("gitglade {}", env!("CARGO_PKG_VERSION"));
         return;
     }
     if args.first().is_some_and(|a| a == "skill") {
         if args.len() == 1 {
             if language == CliLanguage::Chinese {
-                print!("{}", include_str!("../../skills/oil-git/SKILL.zh-CN.md"));
+                print!("{}", include_str!("../../skills/gitglade/SKILL.zh-CN.md"));
             } else {
-                print!("{}", include_str!("../../skills/oil-git/SKILL.md"));
+                print!("{}", include_str!("../../skills/gitglade/SKILL.md"));
             }
         } else if args.len() == 2 && args[1] == "--path" {
             println!("{}", installed_skill_path(language).display());
         } else {
             if language == CliLanguage::Chinese {
-                eprintln!("用法：oil-git skill [--path]");
+                eprintln!("用法：gitglade skill [--path]");
             } else {
-                eprintln!("Usage: oil-git skill [--path]");
+                eprintln!("Usage: gitglade skill [--path]");
             }
             std::process::exit(2);
         }
@@ -645,7 +656,7 @@ pub fn run() {
         } else {
             Err(Error::new(
                 "arguments",
-                "用法：oil-git inspect <项目路径> --json",
+                "用法：gitglade inspect <项目路径> --json",
             ))
         };
         match result {
@@ -718,7 +729,7 @@ pub fn run() {
             open_git_install
         ])
         .run(tauri::generate_context!())
-        .expect("无法启动 oil-git");
+        .expect("无法启动 GitGlade");
 }
 
 #[cfg(test)]

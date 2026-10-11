@@ -468,9 +468,9 @@ export default function App() {
       {!repo.project ? (
         <main className="welcome">
           <div className="welcome-mark">
-            <Icon name="branch" size={56} />
+            <img src="/gitglade.svg" width={72} height={72} alt="" />
           </div>
-          <h1>oil-git</h1>
+          <h1>GitGlade</h1>
           <p>
             {(repo.gitStatus.error && (
               <ErrorMessage error={repo.gitStatus.error} />

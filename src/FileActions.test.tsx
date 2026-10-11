@@ -114,7 +114,7 @@ it("图片显示真实双方、切换对比方式，新增文件不提供双图�
   expect(screen.getByRole("img", { name: "变更后" })).toBeTruthy();
 });
 it("图片叠加控件用完整的本地化比较侧名称", () => {
-  localStorage.setItem("oil-git.language", "en");
+  localStorage.setItem("gitglade.language", "en");
   render(
     <LanguageProvider>
       <DiffView
@@ -388,7 +388,7 @@ it("行归属只接受当前文件与行号的响应", async () => {
   });
 });
 it("英文行归属翻译未提交状态，但保留真实 Git 身份与提交主题", async () => {
-  localStorage.setItem("oil-git.language", "en");
+  localStorage.setItem("gitglade.language", "en");
   vi.mocked(request).mockImplementation(async (_command, args) => {
     const requestData = args as { request: { path: string } };
     return requestData.request.path === "uncommitted.ts"

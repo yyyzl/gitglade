@@ -1,4 +1,4 @@
-use oil_git_lib::git::{Git, LineOriginRequest};
+use gitglade_lib::git::{Git, LineOriginRequest};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -55,7 +55,7 @@ impl Fixture {
         command(&self.git, &self.peer, &["add", "."]);
         command(&self.git, &self.peer, &["commit", "-m", "remote update"]);
     }
-    fn inspect(&self) -> oil_git_lib::git::BranchUpdate {
+    fn inspect(&self) -> gitglade_lib::git::BranchUpdate {
         self.git.check_branch_update(&self.repo, None).unwrap()
     }
 }

@@ -8,7 +8,7 @@ import {
 export type Theme = "dark" | "light" | "green";
 export function loadTheme(): Theme {
   try {
-    const value = localStorage.getItem("oil-git.theme");
+    const value = localStorage.getItem("gitglade.theme");
     if (value === "light" || value === "green" || value === "dark")
       return value;
   } catch {}
@@ -29,7 +29,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (value: Theme) => {
     applyTheme(value);
     try {
-      localStorage.setItem("oil-git.theme", value);
+      localStorage.setItem("gitglade.theme", value);
     } catch {}
     setValue(value);
   };

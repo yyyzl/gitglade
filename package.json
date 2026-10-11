@@ -1,20 +1,20 @@
 {
-  "name": "oil-git",
-  "version": "0.1.0",
+  "name": "gitglade",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test": "vitest run",
+    "test": "vitest run src && node --test scripts/brand.test.mjs",
     "tauri": "tauri",
     "desktop": "tauri dev",
     "package": "tauri build",
     "prebuild": "node scripts/prepare-assets.mjs",
     "predev": "node scripts/prepare-assets.mjs",
     "pretest": "node scripts/prepare-assets.mjs",
-    "format": "prettier --write src scripts package.json tsconfig.json README*.md CONTRIBUTING.md AGENTS.md THIRD-PARTY-NOTICES.md docs .github skills/oil-git index.html \"src-tauri/tauri*.conf.json\"",
-    "format:check": "prettier --check src scripts package.json tsconfig.json README*.md CONTRIBUTING.md AGENTS.md THIRD-PARTY-NOTICES.md docs .github skills/oil-git index.html \"src-tauri/tauri*.conf.json\""
+    "format": "prettier --write src scripts package.json tsconfig.json README*.md CONTRIBUTING.md AGENTS.md THIRD-PARTY-NOTICES.md docs .github skills/gitglade index.html \"src-tauri/tauri*.conf.json\"",
+    "format:check": "prettier --check src scripts package.json tsconfig.json README*.md CONTRIBUTING.md AGENTS.md THIRD-PARTY-NOTICES.md docs .github skills/gitglade index.html \"src-tauri/tauri*.conf.json\""
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -39,6 +39,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oil-oil/oil-git.git"
+    "url": "https://github.com/yyyzl/gitglade.git"
   }
 }

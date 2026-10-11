@@ -1,8 +1,8 @@
-# Contributing to oil-git
+# Contributing to GitGlade
 
 [简体中文](docs/zh-CN/contributing.md)
 
-oil-git is a desktop viewer for real Git repositories. Viewing remains read-only; the explicit fetch-and-fast-forward update flow is defined in AGENTS.md. Contributions should help people understand branches, commits, and changes.
+GitGlade is a desktop viewer for real Git repositories. Viewing remains read-only; the explicit fetch-and-fast-forward update flow is defined in AGENTS.md. Contributions should help people understand branches, commits, and changes.
 
 ## Issues and proposals
 
@@ -30,7 +30,7 @@ Link the commit, actual results, and unchecked areas in the PR. Use independent 
 - **Installed package**: run the packaged program and launcher; check resources, CLI behavior, exit codes, and repository immutability. Exercise the same universal DMG on ARM64 and Intel, and the installed NSIS program on Windows. Record the platform, architecture, and installer SHA-256.
 - **Native window**: interface changes require real interaction on the target platform. Check project opening and restoration, refresh and error ownership, file scopes, history navigation, wrapping and resizing, image comparison and line attribution, language, themes, copy feedback, and reduced motion. CLI checks do not replace these checks.
 
-[Desktop CI](https://github.com/oil-oil/oil-git/actions/workflows/build.yml) covers source and installed CLI checks on all three platforms; it does not cover WebView rendering or native interaction. Configured or skipped jobs and local cross-compilation are not platform passes. Keep acceptance reports, screenshots, and machine-specific logs outside the repository; public docs describe durable behavior and methods.
+[Desktop CI](https://github.com/yyyzl/gitglade/actions/workflows/build.yml) covers source and installed CLI checks on all three platforms; it does not cover WebView rendering or native interaction. Configured or skipped jobs and local cross-compilation are not platform passes. Keep acceptance reports, screenshots, and machine-specific logs outside the repository; public docs describe durable behavior and methods.
 
 ## License
 

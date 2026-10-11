@@ -61,7 +61,7 @@ describe("界面语言", () => {
   });
 
   it("优先恢复保存的选择，切换时即时更新并持久化", () => {
-    localStorage.setItem("oil-git.language", "zh-CN");
+    localStorage.setItem("gitglade.language", "zh-CN");
     function Harness() {
       const { language, setLanguage, t } = useI18n();
       return (
@@ -78,7 +78,7 @@ describe("界面语言", () => {
     expect(screen.getByRole("button").textContent).toBe("分支 / zh-CN");
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByRole("button").textContent).toBe("History / en");
-    expect(localStorage.getItem("oil-git.language")).toBe("en");
+    expect(localStorage.getItem("gitglade.language")).toBe("en");
     view.unmount();
     render(
       <LanguageProvider>

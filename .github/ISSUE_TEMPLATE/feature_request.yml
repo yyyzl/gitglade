@@ -13,6 +13,6 @@ body:
     id: proposal
     attributes:
       label: Proposed behavior / 建议的行为
-      description: Describe the interaction and any alternatives. oil-git does not perform Git writes. / 描述交互与备选方式。oil-git 不提供 Git 写操作。
+      description: Describe the interaction and any alternatives. GitGlade viewing stays read-only; only the existing confirmed fetch-and-fast-forward flow writes Git state. / 描述交互与备选方式。GitGlade 查看保持只读；仅已有的确认后获取与快进流程会更改 Git 状态。
     validations:
       required: true

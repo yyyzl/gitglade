@@ -5,7 +5,7 @@ type Pane = "sidebar" | "detail";
 const defaults = { sidebar: 360, detail: 420 };
 function saved(pane: Pane) {
   try {
-    const value = Number(localStorage.getItem("oil-git." + pane + "-width"));
+    const value = Number(localStorage.getItem("gitglade." + pane + "-width"));
     return Number.isFinite(value) && value >= 180 && value <= 4096
       ? value
       : defaults[pane];
@@ -69,7 +69,7 @@ export function usePaneLayout(shell: RefObject<HTMLDivElement | null>) {
   const persist = (pane: Pane) => {
     try {
       localStorage.setItem(
-        "oil-git." + pane + "-width",
+        "gitglade." + pane + "-width",
         String(preferred.current[pane]),
       );
     } catch {

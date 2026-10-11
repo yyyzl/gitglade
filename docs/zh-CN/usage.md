@@ -4,7 +4,7 @@
 
 ## 安装与打开
 
-macOS 打开 DMG，将 oil-git 拖入 Applications；Windows 运行 setup.exe。安装包功能范围以对应发布标签和说明为准。电脑需要已有 Git，应用会检测 PATH 和常见安装位置；运行安装后的应用不需要 Node、Rust 或 Python。Windows 缺少 WebView2 时，安装程序可下载微软运行组件。
+macOS 打开 DMG，将 GitGlade 拖入 Applications；Windows 运行 setup.exe。安装包功能范围以对应发布标签和说明为准。电脑需要已有 Git，应用会检测 PATH 和常见安装位置；运行安装后的应用不需要 Node、Rust 或 Python。Windows 缺少 WebView2 时，安装程序可下载微软运行组件。
 
 点击项目按钮或使用 `⌘ O` / `Ctrl O` 选择仓库。选择子目录也能识别所属仓库。最近项目保存在本机，重启时恢复上次项目；移除最近记录不会删除文件或关闭当前项目。重复选择当前项目保持浏览位置，打开途中重复选择同一目标不另发请求。
 
@@ -44,15 +44,15 @@ macOS 首次访问桌面等受保护目录时可能询问权限。处理系统�
 
 ## CLI 与 AI Agent
 
-macOS 可直接使用随包 `bin/oil-git` 或放入 PATH；应用安装在其他位置时，用 `OIL_GIT_APP` 指定完整 `.app` 路径。Windows 使用安装目录的 `oil-git.exe`，或 `bin/oil-git.ps1`。启动器参数相同，带空格的路径需要引号。
+macOS 可直接使用随包 `bin/gitglade` 或放入 PATH；应用安装在其他位置时，用 `GITGLADE_APP` 指定完整 `.app` 路径。Windows 使用安装目录的 `gitglade.exe`，或 `bin/gitglade.ps1`。启动器参数相同，带空格的路径需要引号。
 
 ```sh
-oil-git open "/项目路径" --view changes
-oil-git open "/项目路径" --view history
-oil-git inspect "/项目路径" --json
-oil-git inspect "/项目路径" --json --lang zh-CN
-oil-git skill
-oil-git skill --path
+gitglade open "/项目路径" --view changes
+gitglade open "/项目路径" --view history
+gitglade inspect "/项目路径" --json
+gitglade inspect "/项目路径" --json --lang zh-CN
+gitglade skill
+gitglade skill --path
 ```
 
 `open` 发送桌面打开请求，复用既有窗口。`inspect` 不打开窗口，读取真实快照，但不返回完整代码差异。成功返回 `status=ready` 和 `data`；失败返回 `status=error`、稳定的 `kind` 与 `messageKey`、本地化 `message` 和原始 `diagnostic`，以非零状态退出。`--lang en` 或 `--lang zh-CN` 选择 CLI 与 Skill 语言，不改变仓库数据或界面语言偏好。
@@ -62,10 +62,10 @@ oil-git skill --path
 Windows 可按下面方式使用脚本，无需修改系统执行策略：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\安装目录\bin\oil-git.ps1" inspect "C:\项目路径" --json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\安装目录\bin\gitglade.ps1" inspect "C:\项目路径" --json
 ```
 
-启动器与 Skill 在 macOS 位于 `Contents/Resources`，Windows 位于安装目录。可将完整 `skills/oil-git` 目录交给 Agent 宿主按其规则安装。安装应用不会修改其他应用的 Skill 设置。
+启动器与 Skill 在 macOS 位于 `Contents/Resources`，Windows 位于安装目录。可将完整 `skills/gitglade` 目录交给 Agent 宿主按其规则安装。安装应用不会修改其他应用的 Skill 设置。
 
 ## 仓库访问范围
 
@@ -74,3 +74,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\安装目录\bin\oil
 标准 Git LFS 使用自带的只读过滤器：不运行仓库 LFS 程序、不下载内容、不写入 LFS 对象库。指针与已展开内容按真实暂存范围比较；自定义 LFS 转换和扩展暂不支持。
 
 其他活动的外部 `clean` 或 `process` 过滤器会以 `unsafeFilter` 拒绝读取；未被使用的配置不影响查看。读取不运行分页器、外部差异或文本转换程序、签名校验 helper。仓库路由环境变量不能覆盖用户选择的目录。
+
+## 从 oil-git 迁移
+
+GitGlade 0.1.1 使用独立应用标识 `io.github.yyyzl.gitglade`，可与旧应用共存。首次访问最近项目列表时，仅在 GitGlade 尚无列表的情况下，从同级 `org.oiloil.oilgit` 配置目录复制旧列表。不会覆盖现有列表、删除旧记录或移动仓库内容。
+
+仅当同一 WebView 存储中可访问旧键时，才复制语言、主题、面板宽度、差异分栏比例与工作树偏好。操作系统通常按应用标识隔离存储，因此这些界面设置可能需要重新选择；不会读取或复制不透明的 WebView 数据库。
+
+请使用 `gitglade` 启动器和 `GITGLADE_APP` 环境变量。随包保留的 `oil-git` 兼容启动器只转发到 GitGlade。macOS 的旧 `OIL_GIT_APP` 仅在指向包含 `gitglade` 可执行文件的应用包时生效，不会自动启动旧应用。外部旧别名可能仍指向旧安装位置，需要手动更新。内部保留 `oil-git-update.lock` 文件名，以便两个版本安全协调分支更新。
+
+旧版本标签与安装包保持原名。本次品牌变更不新增自动更新器，也不升级 Git 功能。
