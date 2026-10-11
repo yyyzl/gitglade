@@ -3,7 +3,7 @@ name: gitglade
 description: 用 gitglade 打开用户的本地 Git 项目，查看真实分支、提交、待提交修改和冲突。用户要求用 gitglade 查看项目，或将当前处理的仓库定位到桌面视图时使用。只负责读取与展示，不执行 Git 写操作、网站浏览或云端仓库管理。
 license: MIT
 metadata:
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 # GitGlade

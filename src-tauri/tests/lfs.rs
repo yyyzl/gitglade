@@ -235,6 +235,129 @@ fn tree_bytes(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     files
 }
 
+#[cfg(unix)]
+fn git_without_historical_attributes(fixture: &Fixture) -> Git {
+    use std::os::unix::fs::PermissionsExt;
+    let mut git = fixture.git.clone();
+    let wrapper = fixture._temp.path().join("git-without-source.sh");
+    let binary = git.binary.to_string_lossy().replace('\'', "'\\''");
+    fs::write(
+        &wrapper,
+        format!(
+            "#!/bin/sh\nfor argument in \"$@\"; do\n  if [ \"$argument\" = '--source' ]; then\n    printf 'error: unknown option source\\n' >&2\n    exit 129\n  fi\ndone\nexec '{binary}' \"$@\"\n"
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&wrapper, fs::Permissions::from_mode(0o755)).unwrap();
+    git.binary = wrapper;
+    git
+}
+
+#[cfg(windows)]
+fn git_without_historical_attributes(fixture: &Fixture) -> Git {
+    let mut git = fixture.git.clone();
+    git.binary = PathBuf::from(
+        std::env::var_os("GITGLADE_TEST_LEGACY_GIT")
+            .expect("旧 Git 验证步骤必须提供 Git 2.36.1 路径"),
+    );
+    let version = git.text(&fixture.repo, &["--version"], false).unwrap();
+    assert!(version.starts_with("git version 2.36.1"), "{version}");
+    git
+}
+
+#[cfg(any(unix, windows))]
+#[cfg_attr(windows, ignore = "由专门的 Git 2.36.1 验证步骤运行")]
+#[test]
+fn old_git_reads_regular_history_without_lfs_notices_or_repository_writes() {
+    let f = Fixture::new();
+    let root = f.cmd(&["rev-parse", "HEAD"]);
+    f.write(".gitignore", "target/\n");
+    f.write("notes.txt", "line\n".repeat(400));
+    let added = f.commit("添加普通文件");
+    f.write(".gitignore", "target/\ndist/\n");
+    f.write("notes.txt", "line\n".repeat(400) + "tail\n");
+    let changed = f.commit("修改普通文件");
+    f.cmd(&["mv", "notes.txt", "renamed notes.txt"]);
+    let renamed = f.commit("重命名普通文件");
+    f.cmd(&["rm", ".gitignore"]);
+    let deleted = f.commit("删除普通文件");
+    let git = git_without_historical_attributes(&f);
+    let before = tree_bytes(&f.repo);
+    for (commit, path) in [
+        (root.as_str(), ".gitattributes"),
+        (added.as_str(), ".gitignore"),
+        (changed.as_str(), ".gitignore"),
+        (changed.as_str(), "notes.txt"),
+        (renamed.as_str(), "renamed notes.txt"),
+        (deleted.as_str(), ".gitignore"),
+    ] {
+        let diff = git.diff(&f.repo, "commit", path, Some(commit)).unwrap();
+        assert!(!diff.patch.is_empty(), "{path}");
+        assert!(diff.lfs.is_none(), "{path}");
+        assert!(diff.note.is_none(), "{path}: {:?}", diff.note);
+        assert!(diff.note_key.is_none(), "{path}");
+    }
+    assert_eq!(tree_bytes(&f.repo), before);
+}
+
+#[cfg(any(unix, windows))]
+#[cfg_attr(windows, ignore = "由专门的 Git 2.36.1 验证步骤运行")]
+#[test]
+fn old_git_keeps_lfs_uncertainty_for_real_and_incomplete_pointer_content() {
+    let f = Fixture::new();
+    f.add_baseline("asset.bin", b"actual LFS content");
+    let pointer_commit = f.cmd(&["rev-parse", "HEAD"]);
+    f.write(
+        "possible-pointer.txt",
+        "version https://git-lfs.github.com/spec/v1\noid sha256:incomplete\n",
+    );
+    let incomplete_commit = f.commit("保留疑似指针文本");
+    // 当前属性与历史属性不同，也不能据此取消历史指针的未知提示。
+    f.write(".gitattributes", "*.bin -filter\n");
+    let git = git_without_historical_attributes(&f);
+    let before = tree_bytes(&f.repo);
+    for (commit, path) in [
+        (pointer_commit.as_str(), "asset.bin"),
+        (incomplete_commit.as_str(), "possible-pointer.txt"),
+    ] {
+        let diff = git.diff(&f.repo, "commit", path, Some(commit)).unwrap();
+        assert!(!diff.patch.is_empty(), "{path}");
+        let parent = f.cmd(&["rev-parse", &format!("{commit}^")]);
+        let literal = format!(":(literal){path}");
+        let original = git
+            .run(
+                &f.repo,
+                &[
+                    "diff-tree",
+                    "--root",
+                    "--no-commit-id",
+                    "-r",
+                    "-p",
+                    "--no-ext-diff",
+                    "--no-textconv",
+                    "--no-color",
+                    "--find-renames",
+                    "--unified=3",
+                    &parent,
+                    commit,
+                    "--",
+                    &literal,
+                ],
+                4096,
+                false,
+            )
+            .unwrap();
+        assert_eq!(diff.patch.as_bytes(), original.bytes.as_slice(), "{path}");
+        assert!(diff.lfs.is_none());
+        assert!(diff.note.is_some(), "{path}: {:?}", diff.patch);
+        assert_eq!(
+            diff.note_key.as_deref(),
+            Some("lfsAttributeSourceUnsupported")
+        );
+    }
+    assert_eq!(tree_bytes(&f.repo), before);
+}
+
 #[test]
 fn bundled_process_cleans_content_and_preserves_empty_and_pointer_only_files() {
     let f = Fixture::new();

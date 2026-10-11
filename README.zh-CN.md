@@ -88,7 +88,7 @@ npm run desktop
 
 ## 发布版本
 
-向本 Fork 推送新的 `v主版本.次版本.修订号` 标签（如 `v0.1.1`）。所有平台检查、打包及安装后 CLI 验证通过后，**Desktop CI** 自动创建 GitHub Release，上传 Windows 安装器、macOS 通用 DMG 和 `SHA256SUMS.txt`。已有 Release 不会被覆盖；普通分支推送不会发布版本。发布新版本前应先更新应用版本号。
+向本 Fork 推送新的 `v主版本.次版本.修订号` 标签（如 `v0.1.2`）。所有平台检查、打包及安装后 CLI 验证通过后，**Desktop CI** 自动创建 GitHub Release，上传 Windows 安装器、macOS 通用 DMG 和 `SHA256SUMS.txt`。已有 Release 不会被覆盖；普通分支推送不会发布版本。发布新版本前应先更新应用版本号。
 
 ## 许可证
 
@@ -100,4 +100,4 @@ GitGlade 独立维护，源自 [oil-oil/oil-git](https://github.com/oil-oil/oil-
 
 ### 手动触发发布
 
-也可在 `main` 上选择 **Desktop CI → Run workflow**，将 `release_version` 填为 `v0.1.1`（或应用当前的准确版本）。留空只运行 CI，不发布。非空版本必须与所有应用／包版本一致，并通过完整检查、打包与安装后验证，才会在已测试提交上原子创建新标签并发布安装包。手动路径不会复用或覆盖现有标签、Release。若创建标签后发布失败，应先检查原因，不要盲目删除或移动标签重试。
+也可在 `main` 上选择 **Desktop CI → Run workflow**，将 `release_version` 填为 `v0.1.2`（或应用当前的准确版本）。留空只运行 CI，不发布。非空版本必须与所有应用／包版本一致，并通过完整检查、打包与安装后验证，才会在已测试提交上原子创建新标签并发布安装包。手动路径不会复用或覆盖现有标签、Release。若创建标签后发布失败，应先检查原因，不要盲目删除或移动标签重试。

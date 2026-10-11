@@ -1261,10 +1261,22 @@ impl Git {
         let input = [path.as_bytes(), b"\0"].concat();
         let output = self.run_with_input(repo, &args, 4096, source.is_some(), Some(&input))?;
         if !output.ok {
-            if source.is_some()
-                && (output.stderr.contains("unknown option")
-                    || output.stderr.contains("unknown argument"))
-            {
+            if let Some(source) = source.filter(|_| {
+                output.stderr.contains("unknown option")
+                    || output.stderr.contains("unknown argument")
+            }) {
+                let blob = self.tree_blob(repo, source, path)?;
+                let may_be_pointer = match blob {
+                    Some(blob) if blob.mode.starts_with("100") => self
+                        .small_blob(repo, &blob.oid)?
+                        .is_some_and(|bytes| crate::lfs::looks_like_pointer(&bytes)),
+                    _ => false,
+                };
+                // 只检查提交对象，不使用当前属性、外部过滤器或临时索引。
+                // 内容不是 LFS 指针时，旧 Git 的属性限制不应阻断普通差异。
+                if !may_be_pointer {
+                    return Ok(false);
+                }
                 return Err(Error::new(
                     "lfsAttributeSourceUnsupported",
                     "此版本 Git 无法读取提交当时的 .gitattributes，未确认该历史差异的 LFS 状态。",
