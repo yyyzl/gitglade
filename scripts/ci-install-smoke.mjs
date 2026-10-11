@@ -63,7 +63,7 @@ let mountPoint;
 let macApp;
 try {
   assert.ok(["darwin", "win32"].includes(process.platform));
-  temporary = fs.mkdtempSync(path.join(os.tmpdir(), "oil-git-installed-"));
+  temporary = fs.mkdtempSync(path.join(os.tmpdir(), "gitglade-installed-"));
   const candidates = filesUnder(path.resolve(values["artifact-dir"])).filter(
     (file) =>
       process.platform === "darwin"
@@ -93,12 +93,12 @@ try {
       mountPoint,
     ]);
     mounted = true;
-    const app = path.join(temporary, "安装 with space", "oil-git.app");
+    const app = path.join(temporary, "安装 with space", "GitGlade.app");
     macApp = app;
-    run("ditto", [path.join(mountPoint, "oil-git.app"), app]);
+    run("ditto", [path.join(mountPoint, "GitGlade.app"), app]);
     run("hdiutil", ["detach", mountPoint]);
     mounted = false;
-    executable = path.join(app, "Contents", "MacOS", "oil-git");
+    executable = path.join(app, "Contents", "MacOS", "gitglade");
     resources = path.join(app, "Contents", "Resources");
     check("Universal application contains arm64 and x86_64", () => {
       const architectures = run("lipo", ["-archs", executable]).split(/\s+/);
@@ -117,7 +117,7 @@ try {
       timeout: 300_000,
       windowsVerbatimArguments: true,
     });
-    executable = path.join(resources, "oil-git.exe");
+    executable = path.join(resources, "gitglade.exe");
   }
   check("Installed executable exists", () =>
     assert.ok(fs.existsSync(executable)),
@@ -126,14 +126,14 @@ try {
   const launcher =
     process.platform === "darwin"
       ? (args) =>
-          run("/bin/sh", [path.join(resources, "bin", "oil-git"), ...args])
+          run("/bin/sh", [path.join(resources, "bin", "gitglade"), ...args])
       : (args) =>
           run("powershell.exe", [
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-File",
-            path.join(resources, "bin", "oil-git.ps1"),
+            path.join(resources, "bin", "gitglade.ps1"),
             ...args,
           ]);
   check("Version and help entry points", () => {
@@ -143,7 +143,7 @@ try {
       report.launchEntry = "macOS Launch Services, then bundled CLI";
     }
     report.version = launcher(["--version"]);
-    assert.match(report.version, /^oil-git \d+\.\d+\.\d+/);
+    assert.match(report.version, /^gitglade \d+\.\d+\.\d+/);
     assert.match(cli(["--help"]), /inspect/);
     assert.equal(cli(["--version"]), report.version);
   });
@@ -157,7 +157,7 @@ try {
       const skillPath = cli(["skill", "--path", "--lang", locale]);
       assert.equal(
         fs.realpathSync(skillPath),
-        fs.realpathSync(path.join(resources, "skills", "oil-git", file)),
+        fs.realpathSync(path.join(resources, "skills", "gitglade", file)),
       );
       const content = normalizeLineEndings(
         fs.readFileSync(skillPath, "utf8"),

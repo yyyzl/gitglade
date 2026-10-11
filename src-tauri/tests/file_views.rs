@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use oil_git_lib::git::{Git, LineOriginRequest};
+use gitglade_lib::git::{Git, LineOriginRequest};
 use std::{fs, path::PathBuf};
 use tempfile::TempDir;
 
@@ -41,7 +41,7 @@ impl Repo {
         line: usize,
         commit: Option<&str>,
         path: &str,
-    ) -> oil_git_lib::git::LineOrigin {
+    ) -> gitglade_lib::git::LineOrigin {
         let snapshot = self.git.snapshot(&self.path).unwrap();
         self.git
             .line_origin(
@@ -65,7 +65,7 @@ impl Repo {
 fn png() -> Vec<u8> {
     STANDARD.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV1cAAAAASUVORK5CYII=").unwrap()
 }
-fn payload(side: &oil_git_lib::git::FilePreview, before: bool) -> Vec<u8> {
+fn payload(side: &gitglade_lib::git::FilePreview, before: bool) -> Vec<u8> {
     let side = if before {
         side.before.as_ref()
     } else {

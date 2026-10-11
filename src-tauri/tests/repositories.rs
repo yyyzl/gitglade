@@ -1,4 +1,4 @@
-use oil_git_lib::git::Git;
+use gitglade_lib::git::Git;
 use std::{
     fs,
     io::Write,
@@ -43,7 +43,7 @@ impl Fixture {
         self.cmd(&["commit", "-m", message]);
         self.cmd(&["rev-parse", "HEAD"])
     }
-    fn page(&self) -> oil_git_lib::git::HistoryPage {
+    fn page(&self) -> gitglade_lib::git::HistoryPage {
         let s = self.git.snapshot(&self.repo).unwrap();
         self.git
             .history(&self.repo, "all", 0, &s.history_revision)
@@ -85,7 +85,7 @@ fn tree_bytes(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     files
 }
 fn file_rows(
-    files: &[oil_git_lib::git::FileState],
+    files: &[gitglade_lib::git::FileState],
 ) -> Vec<(String, Option<String>, String, bool, bool)> {
     files
         .iter()
@@ -468,12 +468,12 @@ fn repeated_unused_filter_names_do_not_spawn_per_file_config_reads() {
 #[cfg(unix)]
 #[test]
 fn inherited_git_environment_cannot_redirect_repository_or_replace_behavior() {
-    if let Ok(repo_b) = std::env::var("OIL_GIT_TEST_TARGET_REPO") {
+    if let Ok(repo_b) = std::env::var("GITGLADE_TEST_TARGET_REPO") {
         let git = Git::new(PathBuf::from(
-            std::env::var_os("OIL_GIT_TEST_BINARY").unwrap(),
+            std::env::var_os("GITGLADE_TEST_BINARY").unwrap(),
         ));
         let repo_b = PathBuf::from(repo_b);
-        let expected_head = std::env::var("OIL_GIT_TEST_EXPECTED_HEAD").unwrap();
+        let expected_head = std::env::var("GITGLADE_TEST_EXPECTED_HEAD").unwrap();
         let snapshot = git.snapshot(&repo_b).unwrap();
         assert_eq!(Path::new(&snapshot.path), repo_b);
         assert_eq!(snapshot.branch.as_deref(), Some("beta"));
@@ -535,9 +535,9 @@ fn inherited_git_environment_cannot_redirect_repository_or_replace_behavior() {
             "inherited_git_environment_cannot_redirect_repository_or_replace_behavior",
             "--nocapture",
         ])
-        .env("OIL_GIT_TEST_TARGET_REPO", &repo_b)
-        .env("OIL_GIT_TEST_BINARY", &f.git.binary)
-        .env("OIL_GIT_TEST_EXPECTED_HEAD", &original)
+        .env("GITGLADE_TEST_TARGET_REPO", &repo_b)
+        .env("GITGLADE_TEST_BINARY", &f.git.binary)
+        .env("GITGLADE_TEST_EXPECTED_HEAD", &original)
         .env("GIT_DIR", f.repo.join(".git"))
         .env("GIT_WORK_TREE", &f.repo)
         .env("GIT_INDEX_FILE", f.repo.join(".git/index"))

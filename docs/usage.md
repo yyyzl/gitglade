@@ -1,10 +1,10 @@
-# Using oil-git
+# Using GitGlade
 
 [Home](../README.md) · [简体中文](zh-CN/usage.md)
 
 ## Install and open a repository
 
-On macOS, open the DMG and drag oil-git to Applications. On Windows, run the setup executable. Check the release tag and notes for the package’s feature scope. Your computer needs Git, but running the packaged application does not require Node, Rust, or Python. The application detects Git in PATH and common installation locations. The Windows installer can download Microsoft's WebView2 runtime if it is missing.
+On macOS, open the DMG and drag GitGlade to Applications. On Windows, run the setup executable. Check the release tag and notes for the package’s feature scope. Your computer needs Git, but running the packaged application does not require Node, Rust, or Python. The application detects Git in PATH and common installation locations. The Windows installer can download Microsoft's WebView2 runtime if it is missing.
 
 Use the project button or `⌘ O` / `Ctrl O` to select a repository. Selecting a subdirectory opens its enclosing repository. Recent projects are stored locally, and the last project is restored on restart. Removing a recent item only removes the application's record. It does not delete files or close the current project. Selecting the current project preserves the view; selecting the same pending target does not start another request.
 
@@ -44,15 +44,15 @@ Drag pane dividers, or use arrow keys on a selected divider, to adjust widths. P
 
 ## CLI and AI agents
 
-On macOS, use the bundled `bin/oil-git` launcher directly or put it in your PATH. Set `OIL_GIT_APP` to the full `.app` path when it is installed elsewhere. On Windows, use the installed `oil-git.exe` or `bin/oil-git.ps1`. The launcher accepts the same arguments. Paths containing spaces need quotes.
+On macOS, use the bundled `bin/gitglade` launcher directly or put it in your PATH. Set `GITGLADE_APP` to the full `.app` path when it is installed elsewhere. On Windows, use the installed `gitglade.exe` or `bin/gitglade.ps1`. The launcher accepts the same arguments. Paths containing spaces need quotes.
 
 ```sh
-oil-git open "/path/to/repository" --view changes
-oil-git open "/path/to/repository" --view history
-oil-git inspect "/path/to/repository" --json
-oil-git inspect "/path/to/repository" --json --lang en
-oil-git skill
-oil-git skill --path
+gitglade open "/path/to/repository" --view changes
+gitglade open "/path/to/repository" --view history
+gitglade inspect "/path/to/repository" --json
+gitglade inspect "/path/to/repository" --json --lang en
+gitglade skill
+gitglade skill --path
 ```
 
 `open` sends a request to the desktop application, reusing its existing window. `inspect` reads a real snapshot without opening a window; it does not return full code diffs. Success returns `status=ready` with `data`; failure returns `status=error`, a stable `kind` and `messageKey`, a localized `message`, an original `diagnostic`, and a nonzero exit code. `--lang en` or `--lang zh-CN` selects CLI and Skill text without changing repository data or the interface language preference.
@@ -62,10 +62,10 @@ On each invocation without `--lang`, the CLI reads the first nonempty environmen
 To invoke the optional Windows launcher without changing system execution policy:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\bin\oil-git.ps1" inspect "C:\path\to\repository" --json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\bin\gitglade.ps1" inspect "C:\path\to\repository" --json
 ```
 
-The launcher and Skill are packaged under `Contents/Resources` on macOS and the installation directory on Windows. You can give the complete `skills/oil-git` directory to your agent host for installation according to its rules. Installing oil-git does not change another application's Skill settings.
+The launcher and Skill are packaged under `Contents/Resources` on macOS and the installation directory on Windows. You can give the complete `skills/gitglade` directory to your agent host for installation according to its rules. Installing GitGlade does not change another application's Skill settings.
 
 ## Repository access
 
@@ -74,3 +74,13 @@ Viewing, branch comparison, and the CLI are read-only. The explicit update flow 
 Standard Git LFS uses a bundled read-only filter: it does not run the repository's LFS program, download content, or write to the LFS object store. Pointers and expanded content are compared in their actual staged or unstaged scope. Custom LFS conversions and extensions are unsupported.
 
 Other active external `clean` or `process` filters are rejected with `unsafeFilter`; unused filter configuration does not prevent reading. Reads do not invoke pagers, external diff/text converters, or signature-verification helpers. Repository-routing environment variables cannot override the directory selected by the user.
+
+## Moving from oil-git
+
+GitGlade 0.1.1 uses its own application identity, `io.github.yyyzl.gitglade`, and can coexist with the old app. On first access, it copies the legacy recent-project list from the sibling `org.oiloil.oilgit` configuration directory only if GitGlade has no list. It never overwrites an existing list or deletes the old one. Repository contents are not moved.
+
+Language, theme, pane widths, split ratio, and remembered worktrees are copied to GitGlade preference keys only when legacy keys are accessible in the same WebView storage. Operating systems normally isolate storage by application identity, so these interface settings may need to be selected again. GitGlade does not read or copy opaque WebView databases.
+
+Use the new `gitglade` launcher and `GITGLADE_APP` override. Bundled `oil-git` launcher aliases forward only to GitGlade. The legacy `OIL_GIT_APP` override is accepted on macOS only if it points to an app containing the `gitglade` executable; the launcher never automatically starts the old application. Existing external aliases may still point at the old installation and must be updated manually. The internal `oil-git-update.lock` filename is intentionally retained so both versions coordinate branch updates safely.
+
+Older release tags and installers retain their original names. This rebrand does not add an updater or change Git features.

@@ -47,7 +47,7 @@ Outputs are under the selected Cargo target's `release/bundle` directory. Both l
 
 ## Continuous integration
 
-[Desktop CI](https://github.com/oil-oil/oil-git/actions/workflows/build.yml) runs on pushes, pull requests, and manual dispatch:
+[Desktop CI](https://github.com/yyyzl/gitglade/actions/workflows/build.yml) runs on pushes, pull requests, and manual dispatch:
 
 | Stage         | Scope                                                                                                                                                                                                                              |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,7 +55,7 @@ Outputs are under the selected Cargo target's `release/bundle` directory. Both l
 | Package       | Universal macOS DMG and Windows x64 NSIS installer, only after all source checks pass                                                                                                                                              |
 | Installed CLI | Install the universal DMG on both macOS architectures and the NSIS package on Windows; run the installed binary and launcher and verify bundled resources, CLI snapshots, Unicode paths, LFS behavior, and repository immutability |
 
-Artifacts and per-platform JSON reports are retained for 14 days. This workflow does not publish a Release. A newer run cancels an unfinished run on the same ref. Use the actual run result for a specific commit when reporting CI status.
+Artifacts and per-platform JSON reports are retained for 14 days. Version tags matching `vMAJOR.MINOR.PATCH` publish a Release only after every installed-CLI check passes. Branch pushes do not publish releases. A newer run cancels an unfinished run on the same ref. Use the actual run result for a specific commit when reporting CI status.
 
 The macOS installer check can also run locally:
 

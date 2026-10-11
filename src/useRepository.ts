@@ -252,7 +252,7 @@ export function useRepository() {
         if (!withinProject && !view) {
           let saved: string | null = null;
           try {
-            saved = localStorage.getItem("oil-git.worktree." + original.path);
+            saved = localStorage.getItem("gitglade.worktree." + original.path);
           } catch {
             /* 设置不可用时仍能读取项目。 */
           }
@@ -307,7 +307,7 @@ export function useRepository() {
         setIdentity(original);
         try {
           localStorage.setItem(
-            "oil-git.worktree." + original.path,
+            "gitglade.worktree." + original.path,
             next.snapshot.path,
           );
         } catch {

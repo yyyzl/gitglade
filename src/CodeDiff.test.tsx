@@ -388,7 +388,7 @@ describe("CodeDiff 变高换行", () => {
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.7fr");
     expect(parentRenders).toBe(startRenders);
     fireEvent.pointerUp(handle, { pointerId: 1 });
-    expect(localStorage.getItem("oil-git.diff-split-ratio")).toBe("0.7");
+    expect(localStorage.getItem("gitglade.diff-split-ratio")).toBe("0.7");
     expect(handle.getAttribute("aria-valuenow")).toBe("70");
 
     fireEvent.pointerDown(handle, {
@@ -401,7 +401,7 @@ describe("CodeDiff 变高换行", () => {
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.75fr");
     fireEvent.pointerCancel(handle, { pointerId: 1 });
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.7fr");
-    expect(localStorage.getItem("oil-git.diff-split-ratio")).toBe("0.7");
+    expect(localStorage.getItem("gitglade.diff-split-ratio")).toBe("0.7");
 
     fireEvent.pointerDown(handle, {
       button: 0,
@@ -412,7 +412,7 @@ describe("CodeDiff 变高换行", () => {
     flushFrames();
     fireEvent.blur(window);
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.7fr");
-    expect(localStorage.getItem("oil-git.diff-split-ratio")).toBe("0.7");
+    expect(localStorage.getItem("gitglade.diff-split-ratio")).toBe("0.7");
   });
 
   it("分界可用键盘调整并限制在 25% 至 75%", () => {
@@ -433,6 +433,6 @@ describe("CodeDiff 变高换行", () => {
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.27fr");
     fireEvent.keyDown(handle, { key: "End" });
     expect(root.style.getPropertyValue("--diff-left-track")).toBe("0.75fr");
-    expect(localStorage.getItem("oil-git.diff-split-ratio")).toBe("0.75");
+    expect(localStorage.getItem("gitglade.diff-split-ratio")).toBe("0.75");
   });
 });

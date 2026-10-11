@@ -279,7 +279,7 @@ describe("两栏导航与共享差异", () => {
       ...project,
       snapshot: { ...project.snapshot, operation: "变基" },
     };
-    localStorage.setItem("oil-git.language", "zh-CN");
+    localStorage.setItem("gitglade.language", "zh-CN");
     render(
       <LanguageProvider>
         <App />
@@ -303,7 +303,7 @@ describe("两栏导航与共享差异", () => {
     expect(translatedGraph).toBe(graph);
     expect(translatedGraph.scrollTop).toBe(170);
     expect(screen.getByText(/Rebase/)).toBeTruthy();
-    expect(localStorage.getItem("oil-git.language")).toBe("en");
+    expect(localStorage.getItem("gitglade.language")).toBe("en");
     expect(document.documentElement.lang).toBe("en");
   });
 

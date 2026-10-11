@@ -47,7 +47,7 @@ npm run package -- --target x86_64-pc-windows-msvc --bundles nsis
 
 ## CI
 
-[Desktop CI](https://github.com/oil-oil/oil-git/actions/workflows/build.yml) 在 push、PR 与手动运行时执行：
+[Desktop CI](https://github.com/yyyzl/gitglade/actions/workflows/build.yml) 在 push、PR 与手动运行时执行：
 
 | 阶段          | 范围                                                                                                                             |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,7 +55,7 @@ npm run package -- --target x86_64-pc-windows-msvc --bundles nsis
 | Package       | 所有源码检查通过后，构建 macOS 通用 DMG 与 Windows x64 NSIS                                                                      |
 | Installed CLI | 同一个通用 DMG 分别在两种 macOS 架构安装，Windows 安装 NSIS；运行已安装程序和启动器，验证资源、CLI、中文路径、LFS 和仓库字节不变 |
 
-安装包与每个平台的 JSON 报告保留 14 天，不自动发布 Release。同一 ref 的新运行会取消未结束的旧运行。报告 CI 状态时关联相应提交的真实结果。
+安装包与每个平台的 JSON 报告保留 14 天。版本标签 `vMAJOR.MINOR.PATCH` 在所有安装后 CLI 检查通过后发布 Release；分支推送不会发布。同一 ref 的新运行会取消未结束的旧运行。报告 CI 状态时关联相应提交的真实结果。
 
 macOS 可本地检查安装包：
 

@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect x="40" y="40" width="944" height="944" rx="220" fill="#242820"/><g fill="none" stroke="#bad98a" stroke-width="48" stroke-linecap="round"><path d="M344 302V720M344 575C610 575 740 500 740 340"/></g><g fill="#bad98a"><circle cx="344" cy="302" r="82"/><circle cx="344" cy="720" r="82"/><circle cx="740" cy="340" r="82"/></g><g fill="#242820"><circle cx="344" cy="302" r="39"/><circle cx="344" cy="720" r="39"/><circle cx="740" cy="340" r="39"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="GitGlade">
+  <defs><linearGradient id="canopy" x2="1" y2="1"><stop stop-color="#183e35"/><stop offset="1" stop-color="#0c242a"/></linearGradient><linearGradient id="trail" x2="1" y2="1"><stop stop-color="#b9efd0"/><stop offset="1" stop-color="#64d5ba"/></linearGradient></defs>
+  <rect x="32" y="32" width="960" height="960" rx="230" fill="url(#canopy)"/>
+  <path d="M696 297a280 280 0 1 0 60 342H539" fill="none" stroke="url(#trail)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M398 720V406q0-112 170-112" fill="none" stroke="#f2e1a9" stroke-width="44" stroke-linecap="round"/>
+  <g fill="#f2e1a9" stroke="#12322f" stroke-width="14"><circle cx="398" cy="708" r="48"/><circle cx="398" cy="463" r="48"/><circle cx="568" cy="294" r="48"/></g>
+</svg>

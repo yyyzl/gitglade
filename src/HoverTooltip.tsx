@@ -145,7 +145,7 @@ export function HoverTooltip() {
       }
     }
     const description = tip.target.getAttribute("aria-describedby");
-    const describedBy = [description, "oil-git-tooltip"]
+    const describedBy = [description, "gitglade-tooltip"]
       .filter(Boolean)
       .join(" ");
     tip.target.setAttribute("aria-describedby", describedBy);
@@ -176,7 +176,7 @@ export function HoverTooltip() {
     ? createPortal(
         <div
           className="hover-tooltip"
-          id="oil-git-tooltip"
+          id="gitglade-tooltip"
           role="tooltip"
           ref={bubble}
         >

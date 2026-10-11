@@ -283,7 +283,7 @@ pub fn run_clean() -> i32 {
     match clean(&mut reader, &mut writer).and_then(|_| writer.flush().map_err(CleanError::Io)) {
         Ok(()) => 0,
         Err(error) => {
-            eprintln!("oil-git: {error}");
+            eprintln!("gitglade: {error}");
             1
         }
     }
@@ -510,7 +510,7 @@ pub fn run_filter_process() -> i32 {
     match filter_process(&mut reader, &mut writer) {
         Ok(()) => 0,
         Err(error) => {
-            eprintln!("oil-git: filter process failed: {error}");
+            eprintln!("gitglade: filter process failed: {error}");
             1
         }
     }

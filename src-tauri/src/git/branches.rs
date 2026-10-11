@@ -174,6 +174,7 @@ impl Git {
         } else {
             repo.join(directory)
         };
+        // Keep the shared lock name for safe coexistence with pre-rebrand releases.
         let lock = directory.join("oil-git-update.lock");
         OpenOptions::new()
             .write(true)

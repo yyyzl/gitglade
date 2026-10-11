@@ -32,7 +32,7 @@ function isPatchRow(row: CodeRow): row is Row {
 
 const BASE_ROW_HEIGHT = 24;
 const OVERSCAN = 5;
-const SPLIT_RATIO_KEY = "oil-git.diff-split-ratio";
+const SPLIT_RATIO_KEY = "gitglade.diff-split-ratio";
 const MIN_SPLIT_RATIO = 0.25;
 const MAX_SPLIT_RATIO = 0.75;
 

@@ -3,6 +3,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Optional: publish this exact version (e.g. v0.1.1) after all checks; empty runs CI only"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -11,8 +17,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-plan:
+    name: Validate release intent
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate requested version against source
+        shell: bash
+        env:
+          RELEASE_INPUT: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import assert from "node:assert/strict";
+          const input = process.env.RELEASE_INPUT || "";
+          const manual = process.env.GITHUB_EVENT_NAME === "workflow_dispatch" && input !== "";
+          const tagged = process.env.GITHUB_EVENT_NAME === "push" && process.env.GITHUB_REF.startsWith("refs/tags/v");
+          if (manual) assert.equal(process.env.GITHUB_REF, "refs/heads/main", "Manual publication requires main");
+          if (manual || tagged) {
+            const tag = manual ? input : process.env.GITHUB_REF.slice("refs/tags/".length);
+            assert.match(tag, /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+            const version = tag.slice(1);
+            const read = file => fs.readFileSync(file, "utf8");
+            const pkg = JSON.parse(read("package.json"));
+            const lock = JSON.parse(read("package-lock.json"));
+            const app = JSON.parse(read("src-tauri/tauri.conf.json"));
+            const cargo = read("src-tauri/Cargo.toml").match(/name = "gitglade"\nversion = "([^"]+)"/);
+            const cargoLock = read("src-tauri/Cargo.lock").match(/name = "gitglade"\nversion = "([^"]+)"/);
+            for (const actual of [pkg.version, lock.version, lock.packages[""].version, app.version, cargo?.[1], cargoLock?.[1]]) {
+              assert.equal(actual, version, "Release tag must match every application version");
+            }
+            console.log(`Validated ${tag} at ${process.env.GITHUB_SHA}`);
+          } else console.log("CI only: no release requested");
+          NODE
+
   check:
     name: Checks · ${{ matrix.platform }}
+    needs: release-plan
     strategy:
       fail-fast: false
       matrix:
@@ -59,12 +104,12 @@ jobs:
             target: universal-apple-darwin
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
             bundles: app,dmg
-            artifact: mac-universal-test
+            artifact: installers-macos-universal
           - os: windows-2022
             target: x86_64-pc-windows-msvc
             rust_targets: x86_64-pc-windows-msvc
             bundles: nsis
-            artifact: windows-x64-test
+            artifact: installers-windows-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -102,13 +147,13 @@ jobs:
         include:
           - os: macos-15
             platform: mac-arm64
-            artifact: mac-universal-test
+            artifact: installers-macos-universal
           - os: macos-15-intel
             platform: mac-intel
-            artifact: mac-universal-test
+            artifact: installers-macos-universal
           - os: windows-2022
             platform: windows-x64
-            artifact: windows-x64-test
+            artifact: installers-windows-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
@@ -134,7 +179,7 @@ jobs:
 
   release:
     name: Publish release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_version != '' && github.ref == 'refs/heads/main')
     needs: installed
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -143,7 +188,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: "*-test"
+          pattern: "installers-*"
           merge-multiple: true
           path: installers
       - name: Publish verified installers
@@ -151,7 +196,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release_version || github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          MANUAL_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -165,12 +212,51 @@ jobs:
             printf 'Expected one macOS DMG and one Windows installer\n' >&2
             exit 1
           fi
+          version="${RELEASE_TAG#v}"
+          if [[ "$(basename "${mac_assets[0]}")" != "GitGlade_${version}_universal.dmg" || "$(basename "${windows_assets[0]}")" != "GitGlade_${version}_x64-setup.exe" ]]; then
+            printf 'Installer brand/version must match the release tag\n' >&2
+            exit 1
+          fi
           mkdir -p release-assets
           cp "${mac_assets[0]}" "${windows_assets[0]}" release-assets/
           cd release-assets
           sha256sum ./*.dmg ./*setup.exe > SHA256SUMS.txt
+          # Fail closed on API errors; never overwrite an existing release.
+          published_tags="$(gh api "repos/$GH_REPO/releases" --paginate --jq '.[].tag_name')"
+          if grep -Fxq "$RELEASE_TAG" <<< "$published_tags"; then
+            printf 'Release already exists; refusing to overwrite\n' >&2
+            exit 1
+          fi
+          if [[ "$MANUAL_RELEASE" == 'true' ]]; then
+            # Creating a ref is atomic and fails if the tag already exists.
+            # This happens only after checks, packaging and installed smoke tests.
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$RELEASE_SHA"
+          fi
+          tagged_sha="$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')"
+          if [[ "$tagged_sha" != "$RELEASE_SHA" ]]; then
+            printf 'Tag does not point at the tested commit; refusing publication\n' >&2
+            exit 1
+          fi
+          release_notes="$(cat <<'NOTES'
+          GitGlade is an independently maintained rebrand of oil-git. This release changes the application identity, artwork, CLI, installer names and download site; it adds no Git features. Original MIT copyright and third-party licenses are retained.
+
+          Use the `gitglade` command. The new app identity can coexist with oil-git. Recent projects are copied on a best-effort basis only when the new app has no saved list, without overwriting or deleting old records. WebView storage is normally isolated by app identity, so language, theme and layout preferences may need to be selected again. No automatic updater is added. Older releases remain unchanged.
+
+          GitGlade 是独立维护的品牌变更版本，不升级 Git 功能。保留原始 MIT 版权及第三方许可。新 CLI 为 `gitglade`，新旧应用可共存。最近项目仅在新应用无记录时尽力迁移，不覆盖或删除旧记录；WebView 存储隔离可能需要重新选择语言、主题和布局。未新增自动更新器，旧版本保持不变。
+          NOTES
+          )"
           gh release create "$RELEASE_TAG" \
             --repo "$GH_REPO" --verify-tag \
-            --title "oil-git $RELEASE_TAG" --generate-notes \
+            --title "GitGlade $RELEASE_TAG" --notes "$release_notes" --generate-notes \
             --draft=false --prerelease=false --latest \
             ./*.dmg ./*setup.exe SHA256SUMS.txt
+
+  release-pages:
+    name: Refresh download site
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

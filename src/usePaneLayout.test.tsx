@@ -74,8 +74,8 @@ it("键盘调整两处分界，窗口缩窄再放大恢复原偏好", () => {
   act(() => resize());
   expect(shell.style.getPropertyValue("--sidebar-width")).toBe("880px");
   expect(shell.style.getPropertyValue("--detail-width")).toBe("440px");
-  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("880");
-  expect(localStorage.getItem("oil-git.detail-width")).toBe("440");
+  expect(localStorage.getItem("gitglade.sidebar-width")).toBe("880");
+  expect(localStorage.getItem("gitglade.detail-width")).toBe("440");
 });
 it("侧栏可拖过 520px，最大宽度随窗口变化并保留差异阅读空间", () => {
   render(<Harness />);
@@ -87,7 +87,7 @@ it("侧栏可拖过 520px，最大宽度随窗口变化并保留差异阅读空�
   expect(shell.style.getPropertyValue("--sidebar-width")).toBe("800px");
   expect(handle.getAttribute("aria-valuenow")).toBe("800");
   expect(handle.getAttribute("aria-valuemax")).toBe("880");
-  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("800");
+  expect(localStorage.getItem("gitglade.sidebar-width")).toBe("800");
   fireEvent.pointerDown(handle, { button: 0, clientX: 800 });
   fireEvent.pointerMove(handle, { clientX: 2000 });
   fireEvent.pointerUp(handle);
@@ -102,12 +102,12 @@ it("连续拖拽可结束，取消与失焦不保存临时宽度", () => {
   fireEvent.pointerMove(handle, { clientX: 460 });
   fireEvent.pointerUp(handle);
   expect(shell.style.getPropertyValue("--sidebar-width")).toBe("460px");
-  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("460");
+  expect(localStorage.getItem("gitglade.sidebar-width")).toBe("460");
   fireEvent.pointerDown(handle, { button: 0, clientX: 460 });
   fireEvent.pointerMove(handle, { clientX: 540 });
   fireEvent.pointerCancel(handle);
   expect(shell.style.getPropertyValue("--sidebar-width")).toBe("460px");
-  expect(localStorage.getItem("oil-git.sidebar-width")).toBe("460");
+  expect(localStorage.getItem("gitglade.sidebar-width")).toBe("460");
   fireEvent.pointerDown(handle, { button: 0, clientX: 460 });
   fireEvent.pointerMove(handle, { clientX: 390 });
   fireEvent.blur(window);

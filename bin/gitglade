@@ -1,0 +1,51 @@
+#!/bin/sh
+# Read-only Agent launcher; no Node or Python runtime is needed.
+if [ -n "${GITGLADE_APP:-}" ]; then
+  task_app_path="$GITGLADE_APP"
+elif [ -n "${OIL_GIT_APP:-}" ] && [ -x "$OIL_GIT_APP/Contents/MacOS/gitglade" ]; then
+  # Legacy override is accepted only for a GitGlade executable.
+  task_app_path="$OIL_GIT_APP"
+elif [ "${0%/Contents/Resources/bin/gitglade}" != "$0" ]; then
+  task_app_path="${0%/Contents/Resources/bin/gitglade}"
+elif [ -d '/Applications/GitGlade.app' ]; then
+  task_app_path='/Applications/GitGlade.app'
+elif [ -d "$HOME/Applications/GitGlade.app" ]; then
+  task_app_path="$HOME/Applications/GitGlade.app"
+else
+  printf '%s\n' 'GitGlade.app was not found. Install it or set GITGLADE_APP to its full path.' '未找到 GitGlade.app。请安装应用，或用 GITGLADE_APP 指定完整路径。' >&2
+  exit 1
+fi
+if [ ! -x "$task_app_path/Contents/MacOS/gitglade" ]; then
+  printf '%s\n' 'GitGlade executable not found in the selected app bundle. / 所选应用包中未找到 GitGlade。' >&2
+  exit 1
+fi
+# Normalize the open path before Launch Services changes the working directory.
+# Locale arguments may appear before or after the command.
+task_arguments_remaining=$#
+task_command=''
+task_locale_value=false
+task_repository_pending=false
+while [ "$task_arguments_remaining" -gt 0 ]; do
+  task_argument="$1"
+  shift
+  task_arguments_remaining=$((task_arguments_remaining - 1))
+  if [ "$task_locale_value" = true ]; then
+    task_locale_value=false
+  elif [ "$task_argument" = '--lang' ]; then
+    task_locale_value=true
+  elif [ -z "$task_command" ]; then
+    task_command="$task_argument"
+    [ "$task_command" != 'open' ] || task_repository_pending=true
+  elif [ "$task_repository_pending" = true ]; then
+    case "$task_argument" in
+      /*|--*) ;;
+      *) task_argument="$PWD/$task_argument" ;;
+    esac
+    task_repository_pending=false
+  fi
+  set -- "$@" "$task_argument"
+done
+case "$task_command" in
+  ''|open) exec /usr/bin/open -n -a "$task_app_path" --args "$@" ;;
+  *) exec "$task_app_path/Contents/MacOS/gitglade" "$@" ;;
+esac

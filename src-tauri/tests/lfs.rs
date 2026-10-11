@@ -1,4 +1,4 @@
-use oil_git_lib::git::{Git, LfsDiff, LfsSideState};
+use gitglade_lib::git::{Git, LfsDiff, LfsSideState};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -22,13 +22,13 @@ impl Fixture {
         let repo = dunce::canonicalize(repo).unwrap();
 
         let (discovered, _) = Git::discover().unwrap();
-        let source = PathBuf::from(env!("CARGO_BIN_EXE_oil-git"));
+        let source = PathBuf::from(env!("CARGO_BIN_EXE_gitglade"));
         let helper_dir = temp.path().join("可信 helper 带 spaces");
         fs::create_dir_all(&helper_dir).unwrap();
         #[cfg(windows)]
-        let helper = helper_dir.join("oil-git-lfs-test.exe");
+        let helper = helper_dir.join("gitglade-lfs-test.exe");
         #[cfg(not(windows))]
-        let helper = helper_dir.join("oil-git-lfs-test");
+        let helper = helper_dir.join("gitglade-lfs-test");
         #[cfg(target_os = "macos")]
         // 使用可信构建产物的别名避开副本冷启动校验，仍验证中文与空格路径。
         std::os::unix::fs::symlink(source, &helper).unwrap();
@@ -369,7 +369,7 @@ fn diffs_report_lfs_pointer_metadata_for_staged_unstaged_deleted_and_untracked_f
     assert_eq!(untracked_lfs.after_state, LfsSideState::Pointer);
     assert_eq!(
         untracked_lfs.after.unwrap(),
-        oil_git_lib::git::LfsPointer {
+        gitglade_lib::git::LfsPointer {
             oid: sha256(&untracked),
             size: untracked.len() as u64,
         }
