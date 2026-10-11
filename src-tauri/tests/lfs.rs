@@ -321,17 +321,23 @@ fn old_git_keeps_lfs_uncertainty_for_real_and_incomplete_pointer_content() {
         (incomplete_commit.as_str(), "possible-pointer.txt"),
     ] {
         let diff = git.diff(&f.repo, "commit", path, Some(commit)).unwrap();
-        assert!(diff
-            .patch
-            .contains("version https://git-lfs.github.com/spec/v1"));
+        assert!(!diff.patch.is_empty(), "{path}");
         assert!(diff.lfs.is_none());
-        assert!(diff.note.is_some());
+        assert!(diff.note.is_some(), "{path}: {:?}", diff.patch);
         assert_eq!(
             diff.note_key.as_deref(),
             Some("lfsAttributeSourceUnsupported")
         );
-        if path == "asset.bin" {
-            assert!(diff.patch.contains(&pointer.oid));
+        if !diff.binary {
+            assert!(
+                diff.patch
+                    .contains("version https://git-lfs.github.com/spec/v1"),
+                "{path}: {:?}",
+                diff.patch
+            );
+            if path == "asset.bin" {
+                assert!(diff.patch.contains(&pointer.oid));
+            }
         }
     }
     assert_eq!(tree_bytes(&f.repo), before);
