@@ -112,6 +112,10 @@ export function DiffView({
   active?: boolean;
 }) {
   const { t } = useI18n();
+  const unconfirmedTextDiff =
+    !!data.patch &&
+    !data.binary &&
+    data.noteKey === "lfsAttributeSourceUnsupported";
   const [line, setLine] = useState<{
     side: "before" | "after";
     line: number;
@@ -121,7 +125,9 @@ export function DiffView({
     setLine(null);
   }, [originKey, data.patch]);
   const selectLine =
-    origin && (!data.encoding || data.encoding === "UTF-8")
+    origin &&
+    !unconfirmedTextDiff &&
+    (!data.encoding || data.encoding === "UTF-8")
       ? (side: "before" | "after", number: number) =>
           setLine({ side, line: number })
       : undefined;
@@ -132,7 +138,7 @@ export function DiffView({
         (!data.conflict &&
         !data.lfs &&
         !data.preview &&
-        !(data.note && data.patch)
+        !(data.note && data.patch && !unconfirmedTextDiff)
           ? "virtual-diff"
           : "")
       }
@@ -194,7 +200,7 @@ export function DiffView({
             <Patch patch={data.patch} />
           </details>
         </>
-      ) : data.patch && data.note && data.noteKey ? (
+      ) : data.patch && data.note && data.noteKey && !unconfirmedTextDiff ? (
         <section className="unconfirmed-diff">
           {data.binary && (
             <p className="inline-note">
@@ -219,7 +225,7 @@ export function DiffView({
         <p className="inline-note">
           {t("二进制文件发生变化，无法显示文本差异。")}
         </p>
-      ) : data.patch && data.note ? (
+      ) : data.patch && data.note && !unconfirmedTextDiff ? (
         <section className="unconfirmed-diff">
           <p className="inline-note" role="status">
             {t(data.note)}
@@ -231,7 +237,18 @@ export function DiffView({
         </section>
       ) : data.patch ? (
         <>
-          {origin && line && (
+          {unconfirmedTextDiff && data.note && (
+            <div className="inline-note" role="status">
+              <ErrorMessage
+                error={{
+                  kind: "lfsAttributeSourceUnsupported",
+                  messageKey: data.noteKey,
+                  message: data.note,
+                }}
+              />
+            </div>
+          )}
+          {origin && line && !unconfirmedTextDiff && (
             <LineAttribution
               origin={origin}
               selection={line}

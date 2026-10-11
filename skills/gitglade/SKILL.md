@@ -3,7 +3,7 @@ name: gitglade
 description: Open a user's local Git project in gitglade and inspect real branches, commits, changes, and conflicts. Use when the user asks to inspect a project with gitglade or to locate the repository they are working on in the desktop view. Read-only display only; do not use for Git write operations, website browsing, or cloud repository management.
 license: MIT
 metadata:
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 # GitGlade

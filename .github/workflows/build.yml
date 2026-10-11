@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: "Optional: publish this exact version (e.g. v0.1.1) after all checks; empty runs CI only"
+        description: "Optional: publish this exact version (e.g. v0.1.2) after all checks; empty runs CI only"
         required: false
         default: ""
         type: string
@@ -92,6 +92,23 @@ jobs:
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked --tests
+      - name: Prepare Git 2.36.1 for compatibility regressions
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $legacyGitArchive = Join-Path $env:RUNNER_TEMP 'git-2.36.1.zip'
+          $legacyGitDirectory = Join-Path $env:RUNNER_TEMP 'git-2.36.1'
+          Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.36.1.windows.1/MinGit-2.36.1-64-bit.zip' -OutFile $legacyGitArchive
+          $legacyGitDigest = (Get-FileHash -LiteralPath $legacyGitArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($legacyGitDigest -ne 'a7a78c306dea018cc7ca3efe6a0d87c1dd7a43762705ccb0c5e31e3e44349207') {
+            throw 'Legacy Git archive digest does not match the official release'
+          }
+          Expand-Archive -LiteralPath $legacyGitArchive -DestinationPath $legacyGitDirectory
+      - name: Verify history viewing with Git 2.36.1
+        if: runner.os == 'Windows'
+        env:
+          GITGLADE_TEST_LEGACY_GIT: ${{ runner.temp }}/git-2.36.1/cmd/git.exe
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test lfs old_git_ -- --ignored
 
   bundle:
     name: Package · ${{ matrix.artifact }}
@@ -239,11 +256,13 @@ jobs:
             exit 1
           fi
           release_notes="$(cat <<'NOTES'
-          GitGlade is an independently maintained rebrand of oil-git. This release changes the application identity, artwork, CLI, installer names and download site; it adds no Git features. Original MIT copyright and third-party licenses are retained.
+          GitGlade 0.1.2 fixes historical diff viewing with Git versions that cannot query historical attributes. Regular committed content no longer receives an LFS warning solely because that Git capability is missing. Possible LFS pointers retain an explicit uncertainty notice, while text diffs honor the selected side-by-side or unified layout.
 
-          Use the `gitglade` command. The new app identity can coexist with oil-git. Recent projects are copied on a best-effort basis only when the new app has no saved list, without overwriting or deleting old records. WebView storage is normally isolated by app identity, so language, theme and layout preferences may need to be selected again. No automatic updater is added. Older releases remain unchanged.
+          Compatibility regressions run with actual Git for Windows 2.36.1 and emulated missing historical-attribute support on macOS. They verify that history reads leave repository files, index, refs and configuration unchanged. The app does not substitute working-tree attributes, run external conversions, or download LFS objects. Full historical LFS identification and protected branch updates still require Git with historical-attribute support.
 
-          GitGlade 是独立维护的品牌变更版本，不升级 Git 功能。保留原始 MIT 版权及第三方许可。新 CLI 为 `gitglade`，新旧应用可共存。最近项目仅在新应用无记录时尽力迁移，不覆盖或删除旧记录；WebView 存储隔离可能需要重新选择语言、主题和布局。未新增自动更新器，旧版本保持不变。
+          GitGlade 0.1.2 修复旧 Git 下的历史差异展示。普通提交内容不再仅因 Git 缺少历史属性查询能力而出现 LFS 警告；疑似 LFS 指针仍明确提示属性未知，文本差异遵循左右对照或统一布局选择。真实 Git for Windows 2.36.1 与 macOS 兼容回归验证保持仓库文件、索引、引用和配置不变。应用不使用当前工作区属性代替历史属性，不运行外部转换、不下载 LFS 对象。完整的历史 LFS 识别及受保护分支更新仍需支持历史属性查询的 Git。
+
+          Original MIT copyright and third-party licenses are retained. Native-window interaction and platform signing warnings are separate from installed CLI verification.
           NOTES
           )"
           gh release create "$RELEASE_TAG" \

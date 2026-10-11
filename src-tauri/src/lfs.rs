@@ -68,6 +68,13 @@ pub fn has_unsupported_extension(bytes: &[u8]) -> bool {
     )
 }
 
+/// 仅识别指针开头；历史属性未知时，残缺或扩展指针也不能当成普通内容。
+pub(crate) fn looks_like_pointer(bytes: &[u8]) -> bool {
+    pointer_lines(bytes)
+        .first()
+        .is_some_and(|line| *line == VERSION || VERSION_ALIASES.contains(line))
+}
+
 enum PointerRecognition {
     Standard(Pointer),
     Extension,
@@ -520,6 +527,18 @@ pub fn run_filter_process() -> i32 {
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn pointer_candidates_keep_incomplete_headers_and_legacy_versions() {
+        for version in std::iter::once(VERSION).chain(VERSION_ALIASES) {
+            let incomplete = [b" \r\n".as_slice(), version, b"\r\n"].concat();
+            assert!(looks_like_pointer(&incomplete));
+            assert!(parse_pointer(&incomplete).is_none());
+        }
+        for ordinary in [b"target/\n".as_slice(), b"version 1.0\n", b""] {
+            assert!(!looks_like_pointer(ordinary));
+        }
+    }
 
     fn pkt(payload: &[u8], target: &mut Vec<u8>) {
         write_packet(target, payload).unwrap();

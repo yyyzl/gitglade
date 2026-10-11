@@ -90,9 +90,9 @@ Development requires Node.js 22, Rust, and the Tauri dependencies for your platf
 
 ## Publishing a release
 
-Push a new version tag in `vMAJOR.MINOR.PATCH` format (for example, `v0.1.1`) to this repository. After all platform checks, packaging, and installed-CLI verification succeed, **Desktop CI** creates a GitHub Release and uploads the Windows installer, macOS universal DMG, and `SHA256SUMS.txt`. Existing releases are not overwritten. Ordinary branch pushes do not publish releases. Update the application version before tagging a new version.
+Push a new version tag in `vMAJOR.MINOR.PATCH` format (for example, `v0.1.2`) to this repository. After all platform checks, packaging, and installed-CLI verification succeed, **Desktop CI** creates a GitHub Release and uploads the Windows installer, macOS universal DMG, and `SHA256SUMS.txt`. Existing releases are not overwritten. Ordinary branch pushes do not publish releases. Update the application version before tagging a new version.
 
-Alternatively, run **Desktop CI → Run workflow** on `main` with `release_version` set to `v0.1.1` (or the exact current application version). Leaving it empty runs CI without publishing. An explicit release request must match every package/app version and pass the same full pipeline before the workflow atomically creates a new tag at the tested commit and publishes the installers. Existing tags or releases are never reused by this manual path. A publication failure after tag creation requires inspection; do not delete or move tags to retry blindly.
+Alternatively, run **Desktop CI → Run workflow** on `main` with `release_version` set to `v0.1.2` (or the exact current application version). Leaving it empty runs CI without publishing. An explicit release request must match every package/app version and pass the same full pipeline before the workflow atomically creates a new tag at the tested commit and publishes the installers. Existing tags or releases are never reused by this manual path. A publication failure after tag creation requires inspection; do not delete or move tags to retry blindly.
 
 ## License
 

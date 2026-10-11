@@ -11,7 +11,10 @@ import { DiffView } from "./DiffView";
 import { LanguageProvider } from "./i18n";
 import type { Diff } from "./types";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 const base: Diff = {
   patch: "",
   truncated: false,
@@ -142,6 +145,49 @@ it("二进制历史差异仍显示未确认 LFS 警告和原始诊断", () => {
     screen.getByText("Binary files a/data.bin and b/data.bin differ"),
   ).toBeTruthy();
 });
+it.each(["split", "unified"] as const)(
+  "历史 LFS 属性未知时仍按所选布局显示文本差异（%s）",
+  (layout) => {
+    localStorage.setItem("gitglade.language", "en");
+    const patch =
+      "diff --git a/file.txt b/file.txt\nindex 1111111..2222222 100644\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new\n";
+    const { container } = render(
+      <LanguageProvider>
+        <DiffView
+          data={{
+            ...base,
+            patch,
+            note: "此版本 Git 无法读取提交当时的 .gitattributes。",
+            noteKey: "lfsAttributeSourceUnsupported",
+          }}
+          layout={layout}
+          labels={["Before", "After"]}
+          origin={{ repoId: "test", path: "file.txt", mode: "commit" }}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      "Git could not read historical LFS attributes.",
+    );
+    expect(screen.queryByText("diff --git a/file.txt b/file.txt")).toBeNull();
+    expect(screen.queryByText("Raw Git diff")).toBeNull();
+    expect(container.querySelector(".line-origin-button")).toBeNull();
+    if (layout === "split") {
+      expect(screen.getByLabelText("Before").textContent).toContain("old");
+      expect(screen.getByLabelText("After").textContent).toContain("new");
+      expect(screen.getByRole("separator")).toBeTruthy();
+    } else {
+      expect(screen.getByLabelText("Unified code diff").textContent).toContain(
+        "-old",
+      );
+      expect(screen.getByLabelText("Unified code diff").textContent).toContain(
+        "+new",
+      );
+      expect(screen.queryByRole("separator")).toBeNull();
+    }
+    expect(container.querySelector(".virtual-diff")).toBeTruthy();
+  },
+);
 it("LFS 冲突展示真实双方对象，原始指针冲突按需查看", () => {
   render(
     <DiffView

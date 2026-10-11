@@ -13,7 +13,7 @@ test("package, installer, and crate versions and identities agree", () => {
   const lock = JSON.parse(read("package-lock.json"));
   const app = JSON.parse(read("src-tauri/tauri.conf.json"));
   assert.equal(pkg.name, "gitglade");
-  assert.equal(pkg.version, "0.1.1");
+  assert.equal(pkg.version, "0.1.2");
   assert.equal(lock.name, pkg.name);
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[""].version, pkg.version);
@@ -22,11 +22,11 @@ test("package, installer, and crate versions and identities agree", () => {
   assert.equal(app.identifier, "io.github.yyyzl.gitglade");
   assert.match(
     read("src-tauri/Cargo.toml"),
-    /name = "gitglade"\nversion = "0\.1\.1"/,
+    /name = "gitglade"\nversion = "0\.1\.2"/,
   );
   assert.match(
     read("src-tauri/Cargo.lock"),
-    /name = "gitglade"\nversion = "0\.1\.1"/,
+    /name = "gitglade"\nversion = "0\.1\.2"/,
   );
   assert.equal(app.bundle.resources["../skills/gitglade/"], "skills/gitglade/");
 });
@@ -131,16 +131,16 @@ test("release intent is version-locked and manual publication requires main", ()
     });
   assert.equal(validate("workflow_dispatch", "refs/heads/main", "").status, 0);
   assert.equal(
-    validate("workflow_dispatch", "refs/heads/main", "v0.1.1").status,
+    validate("workflow_dispatch", "refs/heads/main", "v0.1.2").status,
     0,
   );
-  assert.equal(validate("push", "refs/tags/v0.1.1", "").status, 0);
+  assert.equal(validate("push", "refs/tags/v0.1.2", "").status, 0);
   for (const [event, ref, input] of [
-    ["workflow_dispatch", "refs/heads/topic", "v0.1.1"],
+    ["workflow_dispatch", "refs/heads/topic", "v0.1.2"],
     ["workflow_dispatch", "refs/heads/main", "v0.1.0"],
-    ["workflow_dispatch", "refs/heads/main", "v0.1.2"],
-    ["workflow_dispatch", "refs/heads/main", "v00.1.1"],
-    ["workflow_dispatch", "refs/heads/main", "0.1.1"],
+    ["workflow_dispatch", "refs/heads/main", "v0.1.3"],
+    ["workflow_dispatch", "refs/heads/main", "v00.1.2"],
+    ["workflow_dispatch", "refs/heads/main", "0.1.2"],
     ["push", "refs/tags/v0.1.0", ""],
   ])
     assert.notEqual(

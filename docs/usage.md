@@ -32,6 +32,8 @@ File selection responds immediately while the reader retains its previous conten
 
 Text wraps by default, with original line numbers and aligned rows in side-by-side view. Text diffs are capped at 240 KB and show when output is truncated. UTF-16 BOM text is decoded for comparison; encoding-only changes remain visible. Line attribution is unavailable when decoded line numbers cannot reliably map to Git's original text.
 
+Git versions before 2.40 cannot query historical `.gitattributes`. In that case, GitGlade reads the file object from the selected revision: regular content keeps the selected layout; possible LFS pointers retain an attributes-unconfirmed notice while text diffs still support side-by-side or unified view. It never substitutes working-tree attributes for historical ones, runs external conversions, or changes the repository. Full historical LFS identification and protected branch updates still require Git with historical attribute support.
+
 Images support side-by-side, swipe, overlay, and pixel-difference modes. In side-by-side mode, selecting 100% size stacks the two versions vertically. Added or deleted images show a single preview. Audio and video use the system WebView decoder and do not autoplay. Media reads are limited to 8 MiB per side; images with known dimensions are limited to 16 million pixels. Pixel comparison samples at most 2048 × 2048 pixels and labels this limit. Decode support depends on the system WebView. Oversized or undecodable media and other binary files show metadata and a byte comparison of the first 4 KiB.
 
 Text conflicts show the actual conflict sections and line numbers. LFS conflicts show object IDs and sizes. Removing textual conflict markers does not mean Git considers the conflict resolved.
