@@ -94,22 +94,22 @@ export async function build({
   const base = `https://github.com/${repository}`;
   const button = (asset, label) =>
     asset
-      ? `<a class="button primary" href="${escapeHtml(asset.browser_download_url)}">Download ${label} <span aria-hidden="true">↗</span></a><p class="asset-note">${escapeHtml(asset.name)} · ${(asset.size / 1048576).toFixed(1)} MB</p>`
-      : `<p class="unavailable">Installer not published yet</p><a class="text-link" href="${base}/releases">Check releases <span aria-hidden="true">↗</span></a>`;
+      ? `<a class="button primary" href="${escapeHtml(asset.browser_download_url)}">下载 ${label} <span aria-hidden="true">↗</span></a><p class="asset-note">${escapeHtml(asset.name)} · ${(asset.size / 1048576).toFixed(1)} MB</p>`
+      : `<p class="unavailable">安装包尚未发布</p><a class="text-link" href="${base}/releases">查看发布版本 <span aria-hidden="true">↗</span></a>`;
   const replacements = {
     REPOSITORY_URL: base,
     RELEASE_URL: metadata.url,
     RELEASE_STATUS: metadata.version
       ? `GitGlade ${escapeHtml(metadata.version)}`
-      : "The first GitGlade release is on its way",
+      : "首个 GitGlade 版本准备中",
     RELEASE_NOTE: metadata.version
-      ? "Installers below come directly from this project’s GitHub release."
-      : "The GitGlade rebrand is being prepared. Earlier oil-git downloads keep their original name; they are not GitGlade installers.",
-    MAC_DOWNLOAD: button(metadata.mac, "for macOS"),
-    WINDOWS_DOWNLOAD: button(metadata.windows, "for Windows"),
+      ? "以下安装包直接来自本项目的 GitHub 正式发布版本。"
+      : "GitGlade 品牌改版正在准备中。此前的 oil-git 安装包仍使用原名称，请等待 GitGlade 正式发布。",
+    MAC_DOWNLOAD: button(metadata.mac, "macOS 版"),
+    WINDOWS_DOWNLOAD: button(metadata.windows, "Windows 版"),
     CHECKSUMS: metadata.checksums
-      ? `<a class="text-link" href="${escapeHtml(metadata.checksums.browser_download_url)}">Download SHA256 checksums ↗</a>`
-      : "Installer checksums will appear here when published with a GitGlade release.",
+      ? `<a class="text-link" href="${escapeHtml(metadata.checksums.browser_download_url)}">下载 SHA256 校验文件 ↗</a>`
+      : "正式版本发布校验文件后，可在此下载并验证安装包。",
   };
   let html = await readFile(join(root, "index.html"), "utf8");
   html = html.replace(/\{\{([A-Z_]+)\}\}/g, (_, key) => {

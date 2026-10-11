@@ -1,6 +1,6 @@
 # GitGlade website
 
-A small, dependency-free static introduction and download site. Source lives here, separate from the desktop app. No analytics, third-party fonts, browser API requests, or simulated screenshots are shipped.
+A small, dependency-free static introduction and download site. The public page defaults to Simplified Chinese, including accessible labels, release states, and download controls; its primary help link opens the Chinese usage guide. Source lives here, separate from the desktop app. No analytics, third-party fonts, browser API requests, or simulated screenshots are shipped.
 
 ## Build and preview
 

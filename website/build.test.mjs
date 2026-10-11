@@ -118,7 +118,7 @@ test("generated site works without JS and only includes owned pinned downloads",
       assert.ok(ids.has(match[1]), `Missing anchor ${match[1]}`);
     await build({ repository: repo, releases: [], output });
     const pending = await readFile(join(output, "index.html"), "utf8");
-    assert.ok(pending.includes("Installer not published yet"));
+    assert.ok(pending.includes("安装包尚未发布"));
     assert.ok(!pending.includes("/releases/download/"));
   } finally {
     await rm(output, { recursive: true, force: true });
