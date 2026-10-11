@@ -1,21 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="GitGlade is a calm desktop workspace for understanding your Git repository: working tree, branches, history, and text and image changes."
+      content="GitGlade 是本地 Git 仓库可视化桌面工具，清晰展示工作区、分支、提交历史以及文本和图片差异，支持 Windows 和 macOS。"
     />
     <meta name="theme-color" content="#f4f3ee" />
-    <title>GitGlade — A clearer view of your repository</title>
+    <title>GitGlade — 让 Git 清晰可见</title>
     <link rel="icon" type="image/svg+xml" href="./assets/icon.svg" />
     <link rel="stylesheet" href="./assets/style.css" />
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">跳转到正文</a>
     <header class="site-header wrap">
-      <a class="brand" href="#" aria-label="GitGlade home"
+      <a class="brand" href="#" aria-label="GitGlade 首页"
         ><img
           src="./assets/icon.svg"
           width="32"
@@ -23,8 +23,8 @@
           alt=""
         />GitGlade</a
       >
-      <nav aria-label="Main navigation">
-        <a href="#workspace">Workspace</a><a href="#download">Download</a
+      <nav aria-label="主导航">
+        <a href="#workspace">功能介绍</a><a href="#download">下载</a
         ><a href="{{REPOSITORY_URL}}"
           >GitHub <span aria-hidden="true">↗</span></a
         >
@@ -33,24 +33,22 @@
     <main id="main">
       <section class="hero wrap">
         <div class="eyebrow">
-          <span class="small-line"></span> A little room to see the whole
-          picture
+          <span class="small-line"></span> 分支、提交与差异，尽在眼前
         </div>
-        <h1>Your repository.<br /><span>A clearer view.</span></h1>
+        <h1>你的仓库，<br /><span>清晰可见。</span></h1>
         <p class="hero-description">
-          Find your place in a changing codebase. A focused desktop workspace
-          for your working tree, branches, history, and every change in between.
+          看清项目正在发生的变化。在桌面上查看工作区、分支、提交历史，
+          从整个仓库到每一行差异，轻松找到你关心的内容。
         </p>
         <div class="hero-actions">
           <a class="button primary" href="#download"
-            >Get GitGlade <span aria-hidden="true">↓</span></a
+            >下载 GitGlade <span aria-hidden="true">↓</span></a
           ><a class="text-link" href="{{REPOSITORY_URL}}"
-            >Explore the source <span aria-hidden="true">↗</span></a
+            >查看源码 <span aria-hidden="true">↗</span></a
           >
         </div>
         <p class="hero-meta">
-          macOS &amp; Windows <span>·</span> Local repositories
-          <span>·</span> Open source
+          macOS &amp; Windows <span>·</span> 本地仓库 <span>·</span> 开源
         </p>
         <div class="landscape" aria-hidden="true">
           <div class="orbit orbit-one"></div>
@@ -58,77 +56,71 @@
           <div class="orbit orbit-three"></div>
           <span class="node node-one"></span><span class="node node-two"></span
           ><span class="node node-three"></span
-          ><span class="landscape-label">A view across your work.</span>
+          ><span class="landscape-label">看清每一步变化。</span>
         </div>
       </section>
       <section class="workspace-section" id="workspace">
         <div class="wrap">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">One repository, connected perspectives</p>
-              <h2>From the big picture<br />to the smallest change.</h2>
+              <p class="eyebrow">一个仓库，多种视角</p>
+              <h2>从项目全貌，<br />到每一处更改。</h2>
             </div>
             <p>
-              Move between what you’re working on and how you got here. Keep the
-              context close.
+              在当前工作与提交历史之间切换，了解改了什么，也看清这些变化的来龙去脉。
             </p>
           </div>
           <div class="features">
             <article>
-              <span class="feature-number">01 / NOW</span>
-              <h3>Your working tree</h3>
+              <span class="feature-number">01 / 当前更改</span>
+              <h3>查看工作区</h3>
               <p>
-                See staged, unstaged, and merge changes in their own groups.
-                Read text and image diffs without losing your place.
+                分组查看已暂存更改、未暂存更改和合并冲突。
+                阅读文本与图片差异，随时掌握当前进度。
               </p>
               <div class="mini-list" aria-hidden="true">
                 <div>
-                  <span>Staged changes</span
-                  ><span class="status-dot green"></span>
+                  <span>已暂存更改</span><span class="status-dot green"></span>
                 </div>
                 <div>
-                  <span>Changes</span><span class="status-dot amber"></span>
+                  <span>未暂存更改</span><span class="status-dot amber"></span>
                 </div>
                 <div>
-                  <span>Merge changes</span><span class="status-dot red"></span>
+                  <span>合并冲突</span><span class="status-dot red"></span>
                 </div>
               </div>
             </article>
             <article>
-              <span class="feature-number">02 / CONTEXT</span>
-              <h3>Branches &amp; history</h3>
+              <span class="feature-number">02 / 历史脉络</span>
+              <h3>分支与提交历史</h3>
               <p>
-                Follow commits, inspect the files they changed, and compare
-                branches. Filtering the view doesn’t switch your branch.
+                浏览提交记录，查看每次提交涉及的文件，并对比分支。
+                筛选显示的历史时，当前分支保持不变。
               </p>
               <div class="branch-art" aria-hidden="true">
                 <i></i><i></i><i></i><span>main</span><span>feature</span>
               </div>
             </article>
             <article>
-              <span class="feature-number">03 / FLOW</span>
-              <h3>Room for your workflow</h3>
+              <span class="feature-number">03 / 工作流程</span>
+              <h3>融入你的工作方式</h3>
               <p>
-                Observe multiple worktrees. Open a repository from the CLI, or
-                read a structured JSON snapshot alongside your existing tools.
+                查看多个工作树，通过命令行打开仓库，或读取结构化 JSON 快照。
+                与你现有的编辑器、Git 工具和 Agent 配合使用。
               </p>
-              <div class="terminal" aria-label="CLI example">
+              <div class="terminal" aria-label="命令行示例">
                 <span>$ gitglade open .</span><span>$ gitglade --help</span>
               </div>
             </article>
           </div>
-          <p class="diagram-note">
-            Diagrams illustrate the workflow; they are not application
-            screenshots.
-          </p>
+          <p class="diagram-note">图示用于说明工作流程，并非应用截图。</p>
           <div class="principle">
             <span class="principle-mark" aria-hidden="true">↳</span>
             <div>
-              <h3>Observe first. Update deliberately.</h3>
+              <h3>先看清变化，再确认更新。</h3>
               <p>
-                Repository viewing and branch comparison are read-only. The
-                explicit branch-update flow can fetch and fast-forward after
-                confirmation, with safety checks for your worktree.
+                查看仓库和对比分支时保持只读。使用“更新分支”时，应用会先检查工作树状态，
+                在你确认后获取远端记录，并快进更新当前分支。
               </p>
             </div>
           </div>
@@ -137,8 +129,8 @@
       <section class="download-section wrap" id="download">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Make a little space for clarity</p>
-            <h2>Bring GitGlade<br />to your desktop.</h2>
+            <p class="eyebrow">把变化看得更清楚</p>
+            <h2>下载 GitGlade，<br />开始查看你的仓库。</h2>
           </div>
           <div>
             <p class="release-status">{{RELEASE_STATUS}}</p>
@@ -149,9 +141,7 @@
           <article class="download-card">
             <div class="platform-icon" aria-hidden="true">⌘</div>
             <h3>macOS</h3>
-            <p>
-              Universal installer<br />Apple silicon &amp; Intel · macOS 12+
-            </p>
+            <p>通用安装包<br />Apple Silicon 和 Intel · macOS 12+</p>
             {{MAC_DOWNLOAD}}
           </article>
           <article class="download-card">
@@ -159,44 +149,37 @@
               <i></i><i></i><i></i><i></i>
             </div>
             <h3>Windows</h3>
-            <p>64-bit installer<br />Windows 10 / 11 · x64</p>
+            <p>64 位安装包<br />Windows 10 / 11 · x64</p>
             {{WINDOWS_DOWNLOAD}}
           </article>
         </div>
         <p class="download-footnote">{{CHECKSUMS}}</p>
         <div class="setup-notes">
-          <h3>Before you start</h3>
+          <h3>开始使用前</h3>
           <ul>
             <li>
-              Install <a href="https://git-scm.com/downloads">Git</a> and make
-              it available on your PATH.
+              先安装 <a href="https://git-scm.com/downloads">Git</a>，
+              并确保可以在命令行中运行。
             </li>
+            <li>打开已有的本地 Git 仓库，配合你的编辑器和 Git 工具使用。</li>
             <li>
-              Open an existing local Git repository. GitGlade complements your
-              editor and Git tools.
+              Windows 需要 Microsoft Edge WebView2；
+              如果尚未安装，安装器可下载所需运行时。
             </li>
-            <li>
-              Windows requires Microsoft Edge WebView2; the installer can
-              download the runtime if needed.
-            </li>
-            <li>
-              Review each release’s installation and signing notes before
-              opening a downloaded app.
-            </li>
+            <li>安装前请阅读对应版本的安装说明与签名信息。</li>
           </ul>
         </div>
         <div class="download-links">
-          <a class="text-link" href="{{RELEASE_URL}}"
-            >Release notes &amp; all downloads ↗</a
-          ><a
-            class="text-link"
-            href="{{REPOSITORY_URL}}/blob/main/docs/usage.md"
-            >Usage guide ↗</a
+          <a class="text-link" href="{{RELEASE_URL}}">发布说明与全部下载 ↗</a
           ><a
             class="text-link"
             href="{{REPOSITORY_URL}}/blob/main/docs/zh-CN/usage.md"
-            lang="zh-CN"
-            >中文使用指南 ↗</a
+            >使用指南 ↗</a
+          ><a
+            class="text-link"
+            href="{{REPOSITORY_URL}}/blob/main/docs/usage.md"
+            lang="en"
+            >English guide ↗</a
           >
         </div>
       </section>
@@ -210,10 +193,10 @@
           alt=""
         />GitGlade</a
       >
-      <p>A calmer perspective on your Git work.</p>
+      <p>让 Git 清晰可见。</p>
       <div>
-        <a href="{{REPOSITORY_URL}}/blob/main/LICENSE">MIT license</a
-        ><a href="{{REPOSITORY_URL}}/issues">Issues</a>
+        <a href="{{REPOSITORY_URL}}/blob/main/LICENSE">MIT 许可证</a
+        ><a href="{{REPOSITORY_URL}}/issues">问题反馈</a>
       </div>
     </footer>
   </body>
