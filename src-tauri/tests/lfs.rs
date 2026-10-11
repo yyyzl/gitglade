@@ -305,7 +305,7 @@ fn old_git_reads_regular_history_without_lfs_notices_or_repository_writes() {
 #[test]
 fn old_git_keeps_lfs_uncertainty_for_real_and_incomplete_pointer_content() {
     let f = Fixture::new();
-    let pointer = f.add_baseline("asset.bin", b"actual LFS content");
+    f.add_baseline("asset.bin", b"actual LFS content");
     let pointer_commit = f.cmd(&["rev-parse", "HEAD"]);
     f.write(
         "possible-pointer.txt",
@@ -322,23 +322,38 @@ fn old_git_keeps_lfs_uncertainty_for_real_and_incomplete_pointer_content() {
     ] {
         let diff = git.diff(&f.repo, "commit", path, Some(commit)).unwrap();
         assert!(!diff.patch.is_empty(), "{path}");
+        let parent = f.cmd(&["rev-parse", &format!("{commit}^")]);
+        let literal = format!(":(literal){path}");
+        let original = git
+            .run(
+                &f.repo,
+                &[
+                    "diff-tree",
+                    "--root",
+                    "--no-commit-id",
+                    "-r",
+                    "-p",
+                    "--no-ext-diff",
+                    "--no-textconv",
+                    "--no-color",
+                    "--find-renames",
+                    "--unified=3",
+                    &parent,
+                    commit,
+                    "--",
+                    &literal,
+                ],
+                4096,
+                false,
+            )
+            .unwrap();
+        assert_eq!(diff.patch.as_bytes(), original.bytes.as_slice(), "{path}");
         assert!(diff.lfs.is_none());
         assert!(diff.note.is_some(), "{path}: {:?}", diff.patch);
         assert_eq!(
             diff.note_key.as_deref(),
             Some("lfsAttributeSourceUnsupported")
         );
-        if !diff.binary {
-            assert!(
-                diff.patch
-                    .contains("version https://git-lfs.github.com/spec/v1"),
-                "{path}: {:?}",
-                diff.patch
-            );
-            if path == "asset.bin" {
-                assert!(diff.patch.contains(&pointer.oid));
-            }
-        }
     }
     assert_eq!(tree_bytes(&f.repo), before);
 }
